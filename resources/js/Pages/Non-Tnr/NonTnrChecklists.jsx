@@ -1,0 +1,997 @@
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { useState } from "react";
+import DataTable from "@/Components/DataTable";
+import { router, usePage } from "@inertiajs/react";
+
+export default function Index({ empData, items, templates, machines }) {
+ const { flash, emp_data, reports, filters = {} } = usePage().props;
+
+
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(today.getDate() + 7);
+
+  const formatDate = (date) => {
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  // --- Default form values ---
+  const defaultFormData = {
+    control_no: "",
+    description: "",
+    serial: "",
+    frequency: "",
+    platform: "", // 🔑 add platform
+    pm_date: formatDate(today),
+    pm_due: formatDate(nextWeek),
+    performed_by: empData?.emp_name || "",
+    check_item: [],
+    std_use_verification: [],
+    tool_life: [],
+    tech_sign: "",
+    qa_sign: "",
+    days: "",
+    remarks: "",
+    updated_by: empData?.emp_name || "",
+  };
+
+  const [showForm, setShowForm] = useState(false);
+  const [showView, setShowView] = useState(false);
+  const [editData, setEditData] = useState(null);
+  const [viewData, setViewData] = useState(null);
+  const [formData, setFormData] = useState(defaultFormData);
+  const [error, setError] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // --- Reset form ---
+  const resetForm = () => {
+    setFormData(defaultFormData);
+    setError("");
+  };
+
+  // --- Open Add Modal ---
+  const openAddModal = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  // --- Handle Platform Change ---
+ // --- Handle Platform Change ---
+const handlePlatformChange = (e) => {
+  const platform = e.target.value;
+  setFormData({ ...formData, platform });
+
+  // hanapin template based on platform
+  const template = templates.find((t) => t.platform === platform);
+
+  if (template) {
+    // parse items (baka stringified JSON pa)
+    let parsedItems = [];
+    try {
+      parsedItems = Array.isArray(template.items)
+        ? template.items
+        : JSON.parse(template.items || "[]");
+    } catch (err) {
+      parsedItems = [];
+    }
+
+    const defaultCheckItems = parsedItems.map((ci, idx) => ({
+      id: idx,
+      assy_item: ci.assy_item ?? "",
+      requirement: ci.requirement ?? "",
+      activity: ci.activity ?? "",
+      compliance: ci.compliance ?? 1,
+      date: ci.date ?? formData.pm_date,
+      remarks: ci.remarks ?? "PASSED",
+    }));
+
+
+    let parsedStd = [];
+    try {
+      parsedStd = Array.isArray(template.std_use_verification) ? template.std_use_verification : JSON.parse(template.std_use_verification || "[]");
+    } catch (err) {
+      parsedStd = [];
+    }
+
+    const defaultStdVerification = parsedStd.map((sv, idx) => ({
+      id: idx,
+      description: sv.description ?? "",
+      instrument1: sv.instrument1 ?? "",
+      instrument2: sv.instrument2 ?? "",
+      instrument3: sv.instrument3 ?? "",
+    }));
+
+    let parsedToolLife = [];
+try {
+  parsedToolLife = Array.isArray(template.tool_life)
+    ? template.tool_life
+    : JSON.parse(template.tool_life || "[]");
+} catch (err) {
+  parsedToolLife = [];
+}
+
+const defaultToolLife = parsedToolLife.map((tl, idx) => ({
+  id: idx,
+  description: tl.description ?? "",      // Description Name
+  duration_of_usage: tl.duration_of_usage ?? "",    // Duration of Usage
+  expected_tool_life: tl.expected_tool_life ?? "",  // Expected Tool Life
+  remarks: tl.remarks ?? "",                        // Remarks
+}));
+
+
+    setFormData((prev) => ({
+      ...prev,
+      check_item: defaultCheckItems,
+      std_use_verification: defaultStdVerification,
+      tool_life: defaultToolLife,
+    }));
+  } else {
+    setFormData((prev) => ({
+      ...prev,
+      check_item: [],
+      std_use_verification: [],
+      tool_life: [],
+    }));
+  }
+};
+
+const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "control_no") {
+      const machine = machines.find((m) => m.pmnt_no === value);
+      if (machine) {
+        setFormData({
+          ...formData,
+          control_no: value,
+          serial: machine.serial,
+          description: machine.machine_num,
+          frequency: machine.frequency || "",
+          days: "",
+        });
+        setError("");
+      } else {
+        setFormData({
+          ...formData,
+          control_no: value,
+          serial: "",
+          description: "",
+          performed_by: empData?.emp_name || "",
+          frequency: "",
+          days: "",
+        });
+        setError(`Machine "${value}" not found. Please add it first in the inventory.`);
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  // --- Checklist Change Handler ---
+  const handleChecklistChange = (index, field, value) => {
+    const updated = [...formData.check_item];
+    updated[index][field] = value;
+    setFormData({ ...formData, check_item: updated });
+  };
+
+  // --- Submit Handler ---
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (editData) {
+      router.put(`/non-tnr-checklists/${editData.id}`, formData, {
+        onSuccess: () => {
+          alert("✅ Successfully updated!");
+          setShowForm(false);
+        },
+      });
+    } else {
+      router.post("/non-tnr-checklists", formData, {
+        onSuccess: () => {
+          alert("✅ Successfully saved!");
+          setShowForm(false);
+          window.location.reload();
+        },
+      });
+    }
+  };
+
+  // Sa loob ng component
+const openViewModal = (item) => {
+  setViewData({
+    ...item,
+    check_item: Array.isArray(item.check_item)
+      ? item.check_item
+      : JSON.parse(item.check_item || "[]"),
+
+    std_use_verification: Array.isArray(item.std_use_verification)
+      ? item.std_use_verification
+      : JSON.parse(item.std_use_verification || "[]"),
+
+    tool_life: Array.isArray(item.tool_life)
+      ? item.tool_life
+      : JSON.parse(item.tool_life || "[]"),
+  });
+
+  setShowView(true);
+};
+
+
+// Data preparation for DataTable
+const reportRows = Array.isArray(reports?.data)
+  ? reports.data
+  : Array.isArray(reports?.data?.data)
+  ? reports.data.data
+  : [];
+
+
+const dataWithAction = reportRows.map((item) => ({
+    ...item,
+    action: (
+        <button
+            onClick={() => openViewModal(item)} // <- call arrow function here
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+            <i className="fas fa-eye"></i> View
+        </button>
+    ),
+}));
+
+const handleVerify = (id) => {
+  if (!confirm("Are you sure you want to verify this record?")) return;
+
+  router.post(
+    route("non-tnr-checklists.verify", id),
+    {},
+    {
+      onSuccess: () => {
+        alert("✅ Verification successful!");
+        setShowView(false);
+      },
+      onError: (err) => {
+        console.error(err);
+        alert("❌ Verification failed!");
+      },
+    }
+  );
+};
+
+
+  
+  // --- JSX ---
+  return (
+    <AuthenticatedLayout>
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-xl font-bold"><i className="fa-solid fa-clipboard-list"></i>Non-TNR Checklist</h2>
+          <button
+            onClick={openAddModal}
+              className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 border border-blue-800"
+            >
+              + New Checklist
+          </button>
+        </div>
+
+<DataTable
+          columns={[
+            { key: "platform", label: "Platform" },
+            { key: "control_no", label: "Control No" },
+            { key: "pm_date", label: "PM Date" },
+            { key: "pm_due", label: "PM Due" },
+            { key: "performed_by", label: "Performed By" },
+            { key: "tech_sign", label: "Tech Verified" },
+            { key: "qa_sign", label: "QA Verified" },
+            { key: "senior_ee_sign", label: "PM Engineer" },
+            { key: "action", label: "Action" }, // View button
+          ]}
+         data={dataWithAction}
+  meta={reports ? {
+    from: reports.from,
+    to: reports.to,
+    total: reports.total,
+    links: reports.links,
+    currentPage: reports.current_page,
+    lastPage: reports.last_page,
+  } : {}}
+  routeName={route("non-tnr-checklists.index")}
+  filters={filters}
+  rowKey="id"
+  sortBy="id"
+  sortOrder="desc"
+        />
+
+
+
+        {/* Add/Edit Modal */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40">
+            <div className="bg-white p-5 rounded-lg shadow-lg w-[95%] md:max-w-7xl overflow-y-auto max-h-[95vh]">
+                <div className="flex justify-between items-center mb-3 bg-gradient-to-r from-white to-gray-500 p-2 rounded">
+                <h3 className="text-lg font-bold text-violet-800 pt-4 pb-4">
+                  <i className="fas fa-wrench mr-2"></i>
+                  {editData ? "Edit Entry" : "New Entry"}
+                </h3>
+              
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="text-red-400 hover:text-red-600 pr-2 font-bold text-2xl"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                     <table className="w-full border text-sm text-gray-600 mb-4 rounded-lg">
+                  <tbody>
+                    <tr>
+                      <td className="border p-2">Control No</td>
+                      <td className="border p-2">
+                        <input
+                          list="control_no_list"
+                          name="control_no"
+                          value={formData.control_no}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1"
+                          placeholder="Enter/ Select Control No..."
+                          required
+                        />
+                        <datalist id="control_no_list">
+                          {machines.map((m) => (
+                            <option key={m.id} value={m.pmnt_no} />
+                          ))}
+                        </datalist>
+                        {error && (
+                          <p className="text-red-600 text-sm mt-1">
+                            {error}{" "}
+                            <a
+                              href="http://192.168.1.26/mc-inventory-beta/admin"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline text-blue-600"
+                            >
+                              Go to Inventory
+                            </a>
+                          </p>
+                        )}
+                      </td>
+                     
+                      <td className="border p-2">Serial</td>
+                      <td className="border p-2">
+                        <input
+                          type="text"
+                          name="serial"
+                          value={formData.serial}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1 bg-gray-100"
+                          readOnly
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                       <td className="border p-2">Description</td>
+                      <td className="border p-2">
+                        <input
+                          type="text"
+                          name="description"
+                          value={formData.description}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1 bg-gray-100"
+                          readOnly
+                        />
+                      </td>
+                      <td className="border p-2">Frequency</td>
+                      <td className="border p-2">
+                        <input
+                          type="text"
+                          name="frequency"
+                          value={formData.frequency}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1"
+                          required
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border p-2">PM Date</td>
+                      <td className="border p-2">
+                        <input
+                          type="text"
+                          name="pm_date"
+                          value={formData.pm_date}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1"
+                          required
+                        />
+                      </td>
+                      <td className="border p-2">PM Due</td>
+                      <td className="border p-2">
+                        <input
+                          type="text"
+                          name="pm_due"
+                          value={formData.pm_due}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1"
+                          required
+                        />
+                      </td>
+                      
+                    </tr>
+                    <tr>
+                      <td className="border p-2">Performed By</td>
+                      <td className="border p-2">
+                        <input
+                          type="text"
+                          name="performed_by"
+                          value={formData.performed_by}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1 bg-gray-100"
+                          readOnly
+                        />
+                      </td>
+                      <td className="border p-2">Platform</td>
+                      <td className="border p-2">
+                        <select
+                             name="platform"
+                             value={formData.platform}
+                            onChange={handlePlatformChange}
+                             className="w-full border rounded p-2"
+                         >
+                         <option value="">-- Select Platform --</option>
+                             {templates.map((tpl, idx) => (
+                         <option key={idx} value={tpl.platform}>
+                             {tpl.platform}
+                        </option>
+                      ))}
+                    </select>
+                        </td>
+                    </tr>
+                  </tbody>
+                </table>
+                  </div>
+                </div>
+                {/* Check Items Table */}
+                {formData.check_item.length > 0 && (
+                  <>
+                    <h3 className="font-bold text-violet-700">Check Items</h3>
+                    <table className="w-full border text-sm text-gray-600 mb-4">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="border p-2">Assembly Items</th>
+                          <th className="border p-2">Requirement</th>
+                          <th className="border p-2">Activity</th>
+                          <th className="border p-2">Compliance</th>
+                          <th className="border p-2">Date</th>
+                          <th className="border p-2">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {formData.check_item.map((row, index) => (
+                          <tr key={index}>
+                            <td className="border p-2">
+                              <input
+                                type="text"
+                                value={row.assy_item}
+                                onChange={(e) =>
+                                  handleChecklistChange(
+                                    index,
+                                    "assy_item",
+                                    e.target.value
+                                  )
+                                }
+                                className="border p-1 rounded w-full"
+                              />
+                            </td>
+                            <td className="border p-2">
+                              <input
+                                type="text"
+                                value={row.requirement}
+                                onChange={(e) =>
+                                  handleChecklistChange(
+                                    index,
+                                    "requirement",
+                                    e.target.value
+                                  )
+                                }
+                                className="border p-1 rounded w-full"
+                              />
+                            </td>
+                            <td className="border p-2">
+                              <input
+                                type="text"
+                                value={row.activity}
+                                onChange={(e) =>
+                                  handleChecklistChange(
+                                    index,
+                                    "activity",
+                                    e.target.value
+                                  )
+                                }
+                                className="border p-1 rounded w-full"
+                              />
+                            </td>
+                            <td className="border p-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={row.compliance === 1}
+                                onChange={(e) =>
+                                  handleChecklistChange(
+                                    index,
+                                    "compliance",
+                                    e.target.checked ? 1 : 0
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="border p-2">
+                              <input
+                                type="date"
+                                value={row.date || formData.pm_date}
+                                onChange={(e) =>
+                                  handleChecklistChange(
+                                    index,
+                                    "date",
+                                    e.target.value
+                                  )
+                                }
+                                className="border p-1 rounded w-full bg-amber-300"
+                              />
+                            </td>
+                            <td className="border p-2">
+                              <input
+                                type="text"
+                                value={row.remarks}
+                                onChange={(e) =>
+                                  handleChecklistChange(
+                                    index,
+                                    "remarks",
+                                    e.target.value
+                                  )
+                                }
+                                className="border p-1 rounded w-full"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+
+                {/* Standard Use Verification */}
+                {formData.std_use_verification &&
+                  formData.std_use_verification.length > 0 && (
+                    <>
+                      <h3 className="font-bold text-violet-700">
+                        Standard Use Verification
+                      </h3>
+                      <table className="w-full border text-sm text-gray-600 mb-4">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="border p-2">Description</th>
+                            <th className="border p-2">Instrument 1</th>
+                            <th className="border p-2">Instrument 2</th>
+                            <th className="border p-2">Instrument 3</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {formData.std_use_verification.map((sv, idx) => (
+                            <tr key={idx}>
+                              <td className="border p-2">
+                                <input
+                                  type="text"
+                                  value={sv.description}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...formData.std_use_verification,
+                                    ];
+                                    updated[idx].description = e.target.value;
+                                    setFormData({
+                                      ...formData,
+                                      std_use_verification: updated,
+                                    });
+                                  }}
+                                  className="border p-1 rounded w-full text-right"
+                                  style={{ textAlign: "right" }}
+                                />
+                              </td>
+                              <td className="border p-2">
+                                <input
+                                  type="text"
+                                  value={sv.instrument1}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...formData.std_use_verification,
+                                    ];
+                                    updated[idx].instrument1 = e.target.value;
+                                    setFormData({
+                                      ...formData,
+                                      std_use_verification: updated,
+                                    });
+                                  }}
+                                  className="border p-1 rounded w-full"
+                                />
+                              </td>
+                              <td className="border p-2">
+                                <input
+                                  type="text"
+                                  value={sv.instrument2}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...formData.std_use_verification,
+                                    ];
+                                    updated[idx].instrument2 = e.target.value;
+                                    setFormData({
+                                      ...formData,
+                                      std_use_verification: updated,
+                                    });
+                                  }}
+                                  className="border p-1 rounded w-full"
+                                />
+                              </td>
+                              <td className="border p-2">
+                                <input
+                                  type="text"
+                                  value={sv.instrument3}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...formData.std_use_verification,
+                                    ];
+                                    updated[idx].instrument3 = e.target.value;
+                                    setFormData({
+                                      ...formData,
+                                      std_use_verification: updated,
+                                    });
+                                  }}
+                                  className="border p-1 rounded w-full"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+
+                  {/* Tool Life Monitoring */}
+{formData.tool_life && formData.tool_life.length > 0 && (
+  <>
+    <h3 className="font-bold text-violet-700">TOOL LIFE MONITORING</h3>
+    <table className="w-full border text-sm text-gray-600 mb-4">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="border p-2">Description Name</th>
+          <th className="border p-2">Duration of Usage</th>
+          <th className="border p-2">Expected Tool Life</th>
+          <th className="border p-2">Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {formData.tool_life.map((tl, idx) => (
+          <tr key={idx}>
+            <td className="border p-2">
+              <input
+                type="text"
+                value={tl.description}
+                onChange={(e) => {
+                  const updated = [...formData.tool_life];
+                  updated[idx].description = e.target.value;
+                  setFormData({ ...formData, tool_life: updated });
+                }}
+                className="border p-1 rounded w-full"
+              />
+            </td>
+            <td className="border p-2">
+              <input
+                type="text"
+                value={tl.duration_of_usage}
+                onChange={(e) => {
+                  const updated = [...formData.tool_life];
+                  updated[idx].duration_of_usage = e.target.value;
+                  setFormData({ ...formData, tool_life: updated });
+                }}
+                className="border p-1 rounded w-full"
+              />
+            </td>
+            <td className="border p-2">
+              <input
+                type="text"
+                value={tl.expected_tool_life}
+                onChange={(e) => {
+                  const updated = [...formData.tool_life];
+                  updated[idx].expected_tool_life = e.target.value;
+                  setFormData({ ...formData, tool_life: updated });
+                }}
+                className="border p-1 rounded w-full"
+              />
+            </td>
+            <td className="border p-2">
+              <input
+                type="text"
+                value={tl.remarks}
+                onChange={(e) => {
+                  const updated = [...formData.tool_life];
+                  updated[idx].remarks = e.target.value;
+                  setFormData({ ...formData, tool_life: updated });
+                }}
+                className="border p-1 rounded w-full"
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}
+
+
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="px-4 py-2 bg-red-600 text-white rounded mr-2 hover:bg-red-700"
+                  >
+                    <i className="fa fa-times mr-2"></i>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    <i className="fa fa-save mr-2"></i>
+                    {editData ? "Update" : "Save"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+       {/* View Modal */}
+{showView && viewData && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40">
+    <div className="bg-white p-5 rounded-lg shadow-lg w-[95%] md:max-w-7xl overflow-y-auto max-h-[95vh]">
+      <div className="flex justify-between items-center mb-3 bg-gradient-to-r from-white to-gray-500 p-2 rounded">
+        <h3 className="text-lg font-bold text-violet-800 pt-4 pb-4">
+          <i className="fas fa-eye mr-2"></i> View Entry
+        </h3>
+        <button
+          onClick={() => setShowView(false)}
+          className="text-red-400 hover:text-red-600 pr-2 font-bold text-2xl"
+        >
+          <i className="fas fa-times"></i>
+        </button>
+      </div>
+ <div className="flex justify-end mb-4  rounded-t-2xl">
+          {/* View PDF Button */}
+{viewData.tech_sign && viewData.qa_sign && viewData.senior_ee_sign && (
+  <a
+    href={`/non-tnr/view-pdf/${viewData.id}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="px-3 py-2 bg-gray-100 text-red-600 rounded shadow hover:bg-red-700 hover:text-white border-2 border-red-600 hover:border-gray-500 flex items-center text-bold"
+  >
+    <i className="fas fa-file-pdf mr-2"></i> View as PDF
+  </a>
+)}
+
+          </div>
+      {/* Header */}
+      <table className="w-full border text-sm text-gray-600 mb-4 rounded-lg">
+       
+        <tbody>
+          <tr>
+            <td className="border p-2">Control No</td>
+            <td className="border p-2">{viewData.control_no}</td>
+            <td className="border p-2">Serial</td>
+            <td className="border p-2">{viewData.serial}</td>
+          </tr>
+          <tr>
+            <td className="border p-2">Description</td>
+            <td className="border p-2">{viewData.description}</td>
+            <td className="border p-2">Frequency</td>
+            <td className="border p-2">{viewData.frequency}</td>
+          </tr>
+          <tr>
+            <td className="border p-2">PM Date</td>
+            <td className="border p-2">{viewData.pm_date}</td>
+            <td className="border p-2">PM Due</td>
+            <td className="border p-2">{viewData.pm_due}</td>
+          </tr>
+          <tr>
+            <td className="border p-2">Performed By</td>
+            <td className="border p-2">{viewData.performed_by}</td>
+            <td className="border p-2">Platform</td>
+            <td className="border p-2 text-red-800 font-bold">{viewData.platform}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Check Items */}
+      {Array.isArray(viewData.check_item) && viewData.check_item.length > 0 && (
+
+        <>
+          <h3 className="font-bold text-violet-700">	&#42; Check Items</h3>
+          <table className="w-full border text-sm text-gray-600 mb-4">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Assembly Items</th>
+                <th className="border p-2">Requirement</th>
+                <th className="border p-2">Activity</th>
+                <th className="border p-2">Compliance</th>
+                <th className="border p-2">Date</th>
+                <th className="border p-2">Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {viewData.check_item.map((row, idx) => (
+                <tr key={idx}>
+                  <td className="border p-2">{row.assy_item}</td>
+                  <td className="border p-2">{row.requirement}</td>
+                  <td className="border p-2">{row.activity}</td>
+                  <td className="border p-2 text-center">
+                    {row.compliance === 1 ? "✔" : "✘"}
+                  </td>
+                  <td className="border p-2">{row.date}</td>
+                  <td className="border p-2">{row.remarks}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Standard Use Verification */}
+      {viewData.std_use_verification?.length > 0 && (
+        <>
+          <h3 className="font-bold text-violet-700">Standard Use Verification</h3>
+          <table className="w-full border text-sm text-gray-600 mb-4">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Description</th>
+                <th className="border p-2">Instrument 1</th>
+                <th className="border p-2">Instrument 2</th>
+                <th className="border p-2">Instrument 3</th>
+              </tr>
+            </thead>
+            <tbody>
+              {viewData.std_use_verification.map((sv, idx) => (
+                <tr key={idx}>
+                  <td className="border p-2">{sv.description}</td>
+                  <td className="border p-2">{sv.instrument1}</td>
+                  <td className="border p-2">{sv.instrument2}</td>
+                  <td className="border p-2">{sv.instrument3}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Validation */}
+      <h3 className="font-bold text-violet-700 mt-4">	&#42; Validation</h3>
+      <table className="w-full border text-sm text-gray-600 mb-4">
+        <tbody>
+          <tr>
+            <td className="border p-2 font-semibold">Technician</td>
+            <td className="border p-2">{viewData.tech_sign || "-"}</td>
+            <td className="border p-2 font-semibold">Date</td>
+            <td className="border p-2">{viewData.tech_sign_date || "-"}</td>
+          </tr>
+          <tr>
+            <td className="border p-2 font-semibold">QA Personnel</td>
+            <td className="border p-2">{viewData.qa_sign || "-"}</td>
+            <td className="border p-2 font-semibold">Date</td>
+            <td className="border p-2">{viewData.qa_sign_date || "-"}</td>
+          </tr>
+          <tr>
+            <td className="border p-2 font-semibold">Senior EE</td>
+            <td className="border p-2">{viewData.senior_ee_sign || "-"}</td>
+            <td className="border p-2 font-semibold">Date</td>
+            <td className="border p-2">{viewData.senior_ee_sign_date || "-"}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Tool Life Monitoring */}
+{viewData.tool_life?.length > 0 && (
+  <>
+    <h3 className="font-bold text-violet-700">	&#42; Tool Life Monitoring</h3>
+    <table className="w-full border text-sm text-gray-600 mb-4">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="border p-2">Description Name</th>
+          <th className="border p-2">Duration of Usage</th>
+          <th className="border p-2">Expected Tool Life</th>
+          <th className="border p-2">Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {viewData.tool_life.map((tl, idx) => (
+          <tr key={idx}>
+            <td className="border p-2">{tl.description}</td>
+            <td className="border p-2">{tl.duration_of_usage}</td>
+            <td className="border p-2">{tl.expected_tool_life}</td>
+            <td className="border p-2">{tl.remarks}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </>
+)}
+
+
+      {/* ✅ Action Buttons */}
+      <div className="flex justify-end mt-4 gap-2">
+
+        {/* ✅ Conditional Verify Button */}
+        {(() => {
+          const techRoles = ["seniortech"];
+          const qaRoles = ["esd"];
+          const seniorRoles = ["engineer"];
+
+          const isTech = techRoles.includes(emp_data?.emp_role);
+          const isQA = qaRoles.includes(emp_data?.emp_role);
+          const isSenior = seniorRoles.includes(emp_data?.emp_role);
+
+          // ✅ Technician verify visible only if no tech_sign
+          if (isTech && !viewData.tech_sign) {
+            return (
+              <button
+                onClick={() => handleVerify(viewData.id)}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                <i className="fas fa-check mr-2"></i> Verify
+              </button>
+            );
+          }
+
+          // ✅ QA verify visible only if tech signed but no QA yet
+          if (isQA && viewData.tech_sign && !viewData.qa_sign) {
+            return (
+              <button
+                onClick={() => handleVerify(viewData.id)}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                <i className="fas fa-check mr-2"></i> Verify
+              </button>
+            );
+          }
+
+          // ✅ Senior verify visible only if tech + QA signed but no Senior yet
+          if (isSenior && viewData.tech_sign && viewData.qa_sign && !viewData.senior_ee_sign) {
+            return (
+              <button
+                onClick={() => handleVerify(viewData.id)}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                <i className="fas fa-check mr-2"></i> Verify
+              </button>
+            );
+          }
+
+          return null; // hide completely if already verified or not eligible
+        })()}
+
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={() => setShowView(false)}
+          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          <i className="fa fa-times mr-2"></i> Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+      </div>
+    </AuthenticatedLayout>
+  );
+}
