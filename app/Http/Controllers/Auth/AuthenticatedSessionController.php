@@ -45,12 +45,23 @@ class AuthenticatedSessionController extends Controller
         }
 
         // Optional: Get role from admin table
-        $isAdmin = DB::connection('mysql')->table('admin')
+        $isAdmin = DB::table('admin')
             ->where('emp_id', $currentUser->EMPLOYID)
             ->first();
 
         // Generate unique token
         $token = Str::random(40);
+
+        $clientIp = $request->ip() ?? $_SERVER['REMOTE_ADDR'] ?? null;
+
+        // Hostname is NOT guaranteed, usually null
+        $clientHostname = null;
+        if ($clientIp && filter_var($clientIp, FILTER_VALIDATE_IP)) {
+            $clientHostname = @gethostbyaddr($clientIp) ?: null;
+        }
+
+        $system = 'PM Schedule System';
+
 
         // Store session in database (auth_sessions)
         DB::connection('mysql')->table('auth_sessions')->insert([
@@ -63,6 +74,11 @@ class AuthenticatedSessionController extends Controller
             'emp_prodline' => $currentUser->PRODLINE ?? null,
             'emp_station' => $currentUser->STATION ?? null,
             'emp_position' => $currentUser->EMPPOSITION ?? null,
+            // ✅ ADD THESE
+            'login_ip' => $clientIp,
+            'login_hostname' => $clientHostname,
+            'user_agent' => $request->userAgent(),
+            'system' => $system,
             'generated_at' => now(),
         ]);
 

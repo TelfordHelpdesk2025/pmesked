@@ -19,7 +19,7 @@ export default function MassApprovalIonizerChecklist({ ionizerReports, empData }
 
     const role = emp_data?.emp_role?.toLowerCase();
 
-    const techRoles = ["seniortech", "engineer"];
+    const techRoles = ["seniortech", "engineer", "pmtech"];
     const qaRoles = ["esd"];
 
     let userRole = null;
@@ -394,7 +394,7 @@ export default function MassApprovalIonizerChecklist({ ionizerReports, empData }
 {/* --- Verifier Buttons --- */}
 <div className="flex justify-end gap-2 mt-4">
   {/* Tech Sign Button */}
-  {["seniortech", "engineer"].includes(emp_data?.emp_role) &&
+  {["seniortech", "engineer", "pmtech"].includes(emp_data?.emp_role) &&
     !viewData?.tech_sign && (
       <button
         onClick={() => handleVerify("tech")}

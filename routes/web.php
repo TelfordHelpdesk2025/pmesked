@@ -22,6 +22,7 @@ use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SchedulerController;
 use App\Http\Controllers\TnrController;
+use App\Http\Middleware\AuthMiddleware;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -30,6 +31,7 @@ require __DIR__ . '/general.php';
 
 // 📂 PDF list
 Route::get('/pdfs', [PdfController::class, 'listPdfs'])->name('pdfs.index');
+
 
 // 📂 Calibration Checklist (dynamic)
 Route::get('/calibration', [CalibrationController::class, 'index'])->name('calibration.index');

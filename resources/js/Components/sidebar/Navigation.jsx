@@ -290,6 +290,18 @@ export default function NavLinks() {
 
                 </div>
             )}
+
+            {["17807"].includes(emp_data?.emp_id) && (
+                <div>
+
+                    <SidebarLink
+                        href={route("ionizer.mass.index")}
+                        label="Ionizer Mass Approved"
+                        icon={<i className="fa-solid fa-list"></i>}
+                    />
+            </div>
+            )}
+
             
             {["1742" , "1788"].includes(emp_data?.emp_id) && (
                 <div>

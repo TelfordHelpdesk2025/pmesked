@@ -639,7 +639,7 @@ const handleVerifyReviewer = () => {
                       setData("calibration_date", e.target.value)
                     }
                     className="border p-2 rounded w-full text-gray-600"
-                    readOnly
+                    required
                   />
                 </div>
 
@@ -653,7 +653,7 @@ const handleVerifyReviewer = () => {
                     value={data.calibration_due}
                     onChange={(e) => setData("calibration_due", e.target.value)}
                     className="border p-2 rounded w-full text-gray-600"
-                    readOnly
+                    required
                   />
                 </div>
 
