@@ -2,10 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useForm, router } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import DataTable from "@/Components/DataTable";
-import { Select } from "antd";
 
-
-export default function DthmPage({ records = [], emp_data, dthmList = [] }) {
+export default function DthmPage({ records = [], emp_data }) {
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -54,63 +52,16 @@ export default function DthmPage({ records = [], emp_data, dthmList = [] }) {
   }, [showModal]);
 
   // 🟩 Handle submit
-const handleSubmit = (e) => {
-  e.preventDefault();
-
-  // 🔹 Listahan ng required fields
-  const requiredFields = [
-    "control_no",
-    "ip_address",
-    "location",
-    "performed_by",
-    "cal_date",
-    "cal_due",
-    "recording_interval",
-    "temp_offset",
-    "rh_offset",
-    "sample_frequency",
-    "master_temp",
-    "master_humidity",
-    "test_temp",
-    "test_humidity",
-    "expand_temp",
-    "expand_humidity",
-  ];
-
-  // 🔹 Hanapin kung may empty
-  const emptyFields = requiredFields.filter(
-    (field) => !data[field] || data[field].toString().trim() === ""
-  );
-
-  if (emptyFields.length > 0) {
-    alert(
-      `⚠️ Warning! Please fill the required fields:\n${emptyFields
-        .map((f) => f.replace(/_/g, " " ))
-        .join(", \n")}`
-    );
-    return; // stop submit
-  }
-
-  // 🔹 Confirm bago mag-submit
-  const isSure = confirm(
-    "✅ All required fields are filled. Are you sure you want to submit?"
-  );
-
-  if (!isSure) {
-    return; // user cancelled
-  }
-
-  // 🔹 All required fields filled & confirmed, submit sa backend
-  post(route("calibration.dthm.store"), {
-    onSuccess: () => {
-      alert("✅ Record added successfully!");
-      setShowModal(false);
-      reset();
-    },
-  });
-};
-
-
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    post(route("calibration.dthm.store"), {
+      onSuccess: () => {
+        alert("✅ Record added successfully!");
+        setShowModal(false);
+        reset();
+      },
+    });
+  };
 
   // 🟦 Handle View
   const handleView = (record) => {
@@ -224,76 +175,41 @@ const dataWithAction = records.data
                 {/* General Info */}
                 <div className="grid grid-cols-5 gap-4">
                   {[
-  "control_no",
-  "ip_address",
-  "location",
-  "cal_date",
-  "cal_due",
-  "performed_by",
-  "recording_interval",
-  "temp_offset",
-  "rh_offset",
-  "sample_frequency",
-].map((key) => (
-  <div key={key}>
-    <label className="block text-xs uppercase font-semibold text-gray-600 mb-1">
-      {key.replace(/_/g, " ")}
-    </label>
-
-    {/* ✅ CONTROL NO - ANT SELECT (SEARCHABLE) */}
-    {key === "control_no" ? (
-      <Select
-        showSearch
-        allowClear
-        placeholder="Select / type Control No"
-        value={data.control_no || undefined}
-        className="w-full"
-        optionFilterProp="label"
-        onChange={(value) => {
-          const selected = dthmList.find(
-            (item) => item.eqpmnt_control_no === value
-          );
-
-          setData((prev) => ({
-            ...prev,
-            control_no: selected?.eqpmnt_control_no || "",
-            ip_address: selected?.ip_address || "",
-            location: selected?.location || "",
-          }));
-        }}
-        options={dthmList.map((item) => ({
-          value: item.eqpmnt_control_no,
-          label: item.eqpmnt_control_no,
-        }))}
-      />
-    ) : (
-      /* ✅ IP ADDRESS & LOCATION AUTO + READONLY */
-      <input
-        type="text"
-        name={key}
-        value={data[key]}
-        onChange={(e) => setData(key, e.target.value)}
-        readOnly={
-          key === "cal_date" ||
-          key === "cal_due" ||
-          key === "performed_by" ||
-          key === "ip_address" ||
-          key === "location"
-        }
-        className={`w-full border border-gray-300 text-gray-600 rounded-md p-2 text-sm focus:ring-1 focus:ring-blue-400 ${
-          key === "cal_date" ||
-          key === "cal_due" ||
-          key === "performed_by" ||
-          key === "ip_address" ||
-          key === "location"
-            ? "bg-gray-100"
-            : ""
-        }`}
-      />
-    )}
-  </div>
-))}
-
+                    "control_no",
+                    "ip_address",
+                    "location",
+                    "cal_date",
+                    "cal_due",
+                    "performed_by",
+                    "recording_interval",
+                    "temp_offset",
+                    "rh_offset",
+                    "sample_frequency",
+                  ].map((key) => (
+                    <div key={key}>
+                      <label className="block text-xs uppercase font-semibold text-gray-600 mb-1">
+                        {key.replace(/_/g, " ")}
+                      </label>
+                      <input
+                        type="text"
+                        name={key}
+                        value={data[key]}
+                        onChange={(e) => setData(key, e.target.value)}
+                        readOnly={
+                          key === "cal_date" ||
+                          key === "cal_due" ||
+                          key === "performed_by"
+                        }
+                        className={`w-full border border-gray-300 text-gray-600 rounded-md p-2 text-sm focus:ring-1 focus:ring-blue-400 ${
+                          key === "cal_date" ||
+                          key === "cal_due" ||
+                          key === "performed_by"
+                            ? "bg-gray-100"
+                            : ""
+                        }`}
+                      />
+                    </div>
+                  ))}
                 </div>
 
                        {/* ⚠️ Remarks Section */}
@@ -392,21 +308,15 @@ const dataWithAction = records.data
       </h2>
 {/* 🧾 View PDF Button */}
 <div className="flex justify-end mb-4">
-  {selectedRecord?.qa_sign && (
   <button
     type="button"
     onClick={() =>
-      window.open(
-        route("calibration.dthm.pdf", { id: selectedRecord.id }),
-        "_blank"
-      )
+      window.open(route("calibration.dthm.pdf", { id: selectedRecord.id }), "_blank")
     }
     className="px-3 py-2 bg-gray-100 text-red-600 rounded shadow hover:bg-red-700 hover:text-white border-2 border-red-600 hover:border-gray-500 flex items-center text-bold"
   >
     <i className="fas fa-file-pdf mr-2"></i> View PDF
   </button>
-)}
-
   </div>
       <form className="space-y-6">
         {/* General Info */}

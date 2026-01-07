@@ -17,7 +17,19 @@ export default function NavLinks() {
                 }
                 // notifications={5}
             />
-            {["pmtech", "toolcrib", "seniortech"].includes(emp_data?.emp_role) && (
+            {["tooling"].includes(emp_data?.emp_role) && (
+                <div>
+            <SidebarLink
+                href={route("non-tnr.granite")}
+                label="Granite Checklist"
+                icon={
+                    <i className="fa-solid fa-g"></i>
+                }
+                // notifications={5}
+            />
+                </div>
+            )}
+            {["pmtech", "toolcrib", "seniortech", "engineer"].includes(emp_data?.emp_role) && (
                 <div>
                      <Dropdown
                 label="TNR"
@@ -57,7 +69,7 @@ export default function NavLinks() {
             </div>
             )}
             
-            {["pmtech", "toolcrib", "seniortech"].includes(emp_data?.emp_role) && (
+            {["pmtech", "toolcrib", "seniortech", "engineer"].includes(emp_data?.emp_role) && (
                 <div>
                     <Dropdown
                 label="Non-TNR"
@@ -100,6 +112,16 @@ export default function NavLinks() {
                         className: "opacity-50 pointer-events-none",
                         // notification: 125,
                     },
+
+                    {
+                        href: route("non-tnr.granite"),
+                        label: "Granite Checklist",
+                        icon: (
+                        <i className="far fa-square"></i>
+                        ),
+                        className: "opacity-50 pointer-events-none",
+                        // notification: 125,
+                    },
                     
                 ]}
                 // notification={true}
@@ -118,7 +140,7 @@ export default function NavLinks() {
             </div>
             )}
 
-             {["pmtech", "toolcrib", "seniortech"].includes(emp_data?.emp_role) && (
+             {["pmtech", "toolcrib", "seniortech", "engineer"].includes(emp_data?.emp_role) && (
                 <div>
                     <Dropdown
                 label="Air Ionizer"

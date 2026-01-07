@@ -7,15 +7,32 @@ use Illuminate\Http\Request;
 use App\Models\Dthm;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 
 class DthmController extends Controller
 {
     public function index(Request $request)
     {
+
+        $dthmList = DB::connection('server201')
+            ->table('dthm_inventory_tbl')
+            ->whereNotNull('eqpmnt_description')
+            ->where('eqpmnt_description', '<>', '')
+            ->whereNotIn('location', ['-', 'N/A'])
+            ->whereNotNull('ip_address')
+            ->where('ip_address', '<>', '-')
+            ->whereRaw("LOWER(status) = ?", ['active'])
+            ->orderBy('eqpmnt_control_no', 'asc')
+            ->distinct()
+            ->get();
+        //
+
+
         $records = Dthm::orderBy('id', 'desc')->paginate(10);
 
         return Inertia::render('Calibration/DthmPage', [
             'records' => $records,
+            'dthmList' => $dthmList,
             'filters' => $request->all(),
             'empData' => [
                 'emp_id' => session('emp_data')['emp_id'] ?? null,
@@ -28,22 +45,22 @@ class DthmController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'control_no' => 'nullable|string|max:45',
-            'ip_address' => 'nullable|string|max:45',
-            'location' => 'nullable|string|max:45',
-            'performed_by' => 'nullable|string|max:45',
-            'cal_date' => 'nullable|string|max:45',
-            'cal_due' => 'nullable|string|max:45',
-            'recording_interval' => 'nullable|string|max:45',
-            'temp_offset' => 'nullable|string|max:45',
-            'rh_offset' => 'nullable|string|max:45',
-            'sample_frequency' => 'nullable|string|max:45',
-            'master_temp' => 'nullable|string|max:45',
-            'master_humidity' => 'nullable|string|max:45',
-            'test_temp' => 'nullable|string|max:45',
-            'test_humidity' => 'nullable|string|max:45',
-            'expand_temp' => 'nullable|string|max:45',
-            'expand_humidity' => 'nullable|string|max:45',
+            'control_no' => 'required|string|max:45',
+            'ip_address' => 'required|string|max:45',
+            'location' => 'required|string|max:45',
+            'performed_by' => 'required|string|max:45',
+            'cal_date' => 'required|string|max:45',
+            'cal_due' => 'required|string|max:45',
+            'recording_interval' => 'required|string|max:45',
+            'temp_offset' => 'required|string|max:45',
+            'rh_offset' => 'required|string|max:45',
+            'sample_frequency' => 'required|string|max:45',
+            'master_temp' => 'required|string|max:45',
+            'master_humidity' => 'required|string|max:45',
+            'test_temp' => 'required|string|max:45',
+            'test_humidity' => 'required|string|max:45',
+            'expand_temp' => 'required|string|max:45',
+            'expand_humidity' => 'required|string|max:45',
             'qa_sign' => 'nullable|string|max:45',
             'qa_sign_date' => 'nullable|string|max:45',
         ]);
@@ -52,6 +69,16 @@ class DthmController extends Controller
         $validated['updated_at'] = now();
 
         Dthm::create($validated);
+
+        $control_no = $request->input('control_no');
+
+        DB::connection('server201')
+            ->table('dthm_inventory_tbl')
+            ->where('eqpmnt_control_no', $control_no)
+            ->update([
+                'eqpmnt_cal_date' => $validated['cal_date'],
+                'eqpmnt_cal_due' => $validated['cal_due']
+            ]);
 
         return redirect()->back()->with('success', '✅ Record added successfully!');
     }

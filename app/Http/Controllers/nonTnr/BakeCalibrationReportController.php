@@ -29,6 +29,12 @@ class BakeCalibrationReportController extends Controller
             'mysql', // Connection for main table
             'calibration_bake_report_list',
             [
+
+                'conditions' => function ($query) {
+                    return $query
+                        ->orderBy('id', 'desc');
+                },
+
                 'searchColumns' => [
                     'machine_num',
                     'control_no',

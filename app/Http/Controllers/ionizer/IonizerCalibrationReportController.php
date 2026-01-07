@@ -21,11 +21,15 @@ class IonizerCalibrationReportController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $machines = Machine::select('*')
-            ->whereNotNull('machine_num')
-            ->where('machine_num', '!=', '')
+        $machines = DB::connection('server201')->table('dthm_inventory_tbl')->select('*')
+            ->whereNotNull('eqpmnt_description')
+            ->where('eqpmnt_description', '<>', '')
+            ->whereNotIn('location', ['-', 'N/A'])
+            ->whereNotNull('ip_address')
+            ->where('ip_address', '<>', '-')
+            ->whereRaw("LOWER(status) = ?", ['active'])
+            ->orderBy('eqpmnt_control_no', 'asc')
             ->distinct()
-            ->orderBy('machine_platform', 'asc')
             ->get();
 
         return Inertia::render('Calibration/IonizerCalibrationReport', [

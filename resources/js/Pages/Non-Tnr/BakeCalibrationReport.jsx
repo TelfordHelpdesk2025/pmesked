@@ -92,14 +92,19 @@ export default function BakeCalibrationReport({
         }
     };
 
+ 
     const handleSubmit = (e) => {
-        e.preventDefault();
-        const sanitizedData = replaceEmptyWithNA(formData);
+    e.preventDefault();
+
+    const sanitizedData = replaceEmptyWithNA(formData);
+
+    if (window.confirm("Are you sure you want to add this record?")) {
         router.post(route("report.store"), sanitizedData, {
             onSuccess: () => {
                 setShowModal(false);
                 alert("✅ Record added successfully!");
                 window.location.reload();
+
                 setFormData({
                     machine_num: "",
                     control_no: "",
@@ -108,13 +113,24 @@ export default function BakeCalibrationReport({
                     date_performed: "",
                     due_date: "",
                     note: "",
-                    oven_set_point1: { tolerance: "", profiling: createProfilingTemplate() },
-                    oven_set_point2: { tolerance: "", profiling: createProfilingTemplate() },
-                    oven_set_point3: { tolerance: "", profiling: createProfilingTemplate() },
+                    oven_set_point1: {
+                        tolerance: "",
+                        profiling: createProfilingTemplate(),
+                    },
+                    oven_set_point2: {
+                        tolerance: "",
+                        profiling: createProfilingTemplate(),
+                    },
+                    oven_set_point3: {
+                        tolerance: "",
+                        profiling: createProfilingTemplate(),
+                    },
                 });
             },
         });
-    };
+    }
+};
+
 
     const renderProfilingSection = (index) => {
         const ovenKey = `oven_set_point${index}`;
@@ -249,9 +265,10 @@ const dataWithAction = tableData.data.map((r) => ({
                 </h1>
 
                 <button
-                    className="text-blue-600 border-blue-600 btn"
+                    className="text-blue-600 border-blue-600 btn hover:bg-blue-600 btn hover:text-white flex items-center px-4 py-2 rounded-md font-semibold"
                     onClick={() => setShowModal(true)}
                 >
+                    <i className="fa-solid fa-plus"></i>
                     Add New Report
                 </button>
             </div>

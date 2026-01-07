@@ -138,8 +138,8 @@ export default function IonizerCalibrationReport({ machines, empData }) {
 const handleMachineChange = (e) => {
   const selected = e.target.value;
 
-  // Hanapin sa machine list kung match ang machine_num
-  const machine = machines.find((m) => m.machine_num === selected);
+  // Hanapin sa machine list kung match ang eqpmnt_description
+  const machine = machines.find((m) => m.eqpmnt_description === selected);
 
   // Kung wala sa list (user typed random text), update lang equipment field
   if (!machine) {
@@ -161,18 +161,19 @@ const handleMachineChange = (e) => {
   setData((prev) => ({
     ...prev,
     equipment: selected,
-    model: machine?.model ?? machine?.machine_model ?? "",
-    serial: machine?.serial ?? machine?.serial_no ?? "",
-    manufacturer: machine?.machine_manufacturer ?? machine?.manufacturer ?? "",
-    control_no: machine?.cn_no ?? machine?.control_no ?? "",
+    model: machine?.eqpmnt_model ?? machine?.machine_model ?? "",
+    serial: machine?.eqpmnt_serial_no ?? machine?.serial_no ?? "",
+    manufacturer: machine?.eqpmnt_manufacturer ?? machine?.manufacturer ?? "",
+    control_no: machine?.eqpmnt_control_no ?? machine?.control_no ?? "",
+    
     calibration_date: pmDateWW,
     calibration_due: pmDueWW,
     performed_by: empData?.emp_name || user?.name || "",
     temperature: "",
     relative_humidity: "",
-    specs: "",
-    report_no: "",
-    cal_interval: "",
+    report_no: machine?.report_no ?? machine?.report_no ?? "",
+    specs: machine?.cal_specs_no ?? machine?.specs ?? "",
+    cal_interval: machine?.cal_interval ?? machine?.cal_interval ?? "",
   }));
 };
 
@@ -243,58 +244,6 @@ const handleDetailChange = (index, e) => {
     updated.splice(i, 1);
     setDetails(updated);
   };
-
-// const handleSubmit = () => {
-//   const filteredStandards = standards.filter(
-//     (s) => Object.values(s).some((v) => v !== "")
-//   );
-//   const filteredDetails = details.filter(
-//     (d) => Object.values(d).some((v) => v !== "")
-//   );
-
-//   post(route("calibration-reports.ionizer.store"), {
-//     preserveScroll: true,
-//     data: {
-//       ...data,
-//       cal_std_use: filteredStandards,
-//       cal_details: filteredDetails,
-//     },
-//     onSuccess: () => {
-//       alert("✅ Ionizer Calibration Report saved successfully!");
-//       reset();
-//       setStandards([
-//         {
-//           description: "",
-//           cal_manufacturer: "",
-//           model_no: "",
-//           cal_control_no: "",
-//           serial_no: "",
-//           accuracy: "",
-//           cal_date: "",
-//           cal_due: "",
-//           traceability: "",
-//         },
-//       ]);
-//       setDetails([
-//         {
-//           function_tested: "",
-//           nominal: "",
-//           tolerance: "",
-//           unit_under_test: "",
-//           standard_instrument: "",
-//           disparity: "",
-//           correction: "",
-//           remarks: "",
-//         },
-//       ]);
-//       setShowModal(false);
-//     },
-//     onError: (errors) => {
-//       console.error(errors);
-//       alert("❌ Failed to save Calibration Report!");
-//     },
-//   });
-// };
 
 const handleSubmit = () => {
   // 🔹 Validate main data fields
@@ -575,8 +524,8 @@ const handleVerifyReviewer = () => {
   <datalist id="machine-list">
     {machines.map((m, index) => (
       <option 
-        key={`${m.machine_num}-${index}`} 
-        value={m.machine_num}
+        key={`${m.eqpmnt_description}-${index}`} 
+        value={m.eqpmnt_description}
       >
       </option>
     ))}
@@ -594,7 +543,7 @@ const handleVerifyReviewer = () => {
                       setData("manufacturer", e.target.value)
                     }
                     placeholder="Machine Manufacturer"
-                    className="border p-2 rounded w-full text-gray-600"
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
                     readOnly
                   />
                 </div>
@@ -608,7 +557,7 @@ const handleVerifyReviewer = () => {
                     value={data.control_no}
                     onChange={(e) => setData("control_no", e.target.value)}
                     placeholder="CN No."
-                    className="border p-2 rounded w-full text-gray-600"
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
                     readOnly
                   />
                 </div>
@@ -621,8 +570,8 @@ const handleVerifyReviewer = () => {
                     value={data.report_no}
                     onChange={(e) => setData("report_no", e.target.value)}
                     placeholder="XX..."
-                    className="border p-2 rounded w-full text-gray-600"
-                    required
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
+                    readOnly
                   />
                 </div>
                 <div>
@@ -634,7 +583,7 @@ const handleVerifyReviewer = () => {
                     value={data.model}
                     onChange={(e) => setData("model", e.target.value)}
                     placeholder="Model"
-                    className="border p-2 rounded w-full text-gray-600"
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
                     readOnly
                   />
                 </div>
@@ -648,7 +597,7 @@ const handleVerifyReviewer = () => {
                     value={data.serial}
                     onChange={(e) => setData("serial", e.target.value)}
                     placeholder="Serial"
-                    className="border p-2 rounded w-full text-gray-600"
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
                     readOnly
                   />
                 </div>
@@ -662,8 +611,8 @@ const handleVerifyReviewer = () => {
                     value={data.specs}
                     onChange={(e) => setData("specs", e.target.value)}
                     placeholder="TFPXX-XXX..."
-                    className="border p-2 rounded w-full text-gray-600"
-                    required
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
+                    readOnly
                   />
                 </div>
 
@@ -678,8 +627,8 @@ const handleVerifyReviewer = () => {
                     value={data.cal_interval}
                     onChange={(e) => setData("cal_interval", e.target.value)}
                     placeholder="Quarterly..."
-                    className="border p-2 rounded w-full text-gray-600"
-                    required
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
+                    readOnly
                   />
                 </div>
                 <div>

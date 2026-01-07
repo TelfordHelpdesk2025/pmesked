@@ -28,6 +28,7 @@ use Inertia\Inertia;
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/general.php';
+require __DIR__ . '/granite.php';
 
 // 📂 PDF list
 Route::get('/pdfs', [PdfController::class, 'listPdfs'])->name('pdfs.index');
