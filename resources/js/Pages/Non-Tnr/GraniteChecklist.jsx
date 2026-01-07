@@ -2,12 +2,16 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router } from "@inertiajs/react";
 import DataTable from "@/Components/DataTable";
 import { useState, useEffect } from "react";
+import { Select } from "antd";
+import axios from "axios";
 
 
-export default function GraniteChecklist({ tableData, tableFilters, emp_data }) {
+export default function GraniteChecklist({ tableData, tableFilters, emp_data, machines }) {
     const [showModal, setShowModal] = useState(false);
     const [viewModal, setViewModal] = useState(false);
     const [selectedReport, setSelectedReport] = useState(null);
+
+    const { Option } = Select;
 
 
     // Header form state
@@ -27,6 +31,29 @@ const formattedToday = formatDateMMDDYYYY(today);
 const nextYear = new Date();
 nextYear.setFullYear(today.getFullYear() + 1);
 const formattedNextYear = formatDateMMDDYYYY(nextYear);
+
+ const handleMachineChange = (e) => {
+  const selected = e.target.value;
+  const machine = machines.find((m) => m.machine_num === selected);
+  if (!machine) {
+    // If user typed random value → do not autofill
+    setData((prev) => ({
+      ...prev,
+      equipment: selected,
+    }));
+    return;
+  }
+
+  setData((prev) => ({
+    ...prev,
+    equipment: selected,
+    control_no: machine?.pmnt_no ?? machine?.control_no ?? "",
+    serial: machine?.serial ?? machine?.serial_no ?? "",
+    performed_by: emp_data?.emp_name || "",
+    date_performed: formattedToday,  // current date MM/DD/YYYY
+    due_date: formattedNextYear,     // 1 year from now MM/DD/YYYY
+  }));
+};
 
 const [formData, setFormData] = useState({
     equipment: "",
@@ -136,9 +163,80 @@ const handleSave = (e) => {
     });
 };
 
+
+
+const handleVerify = async (field) => {
+  if (!selectedReport) return;
+
+  try {
+    // Call backend to save verification
+    const response = await axios.post(route("verify.granite", selectedReport.id), {
+      field,                // "senior_tech", "qa_sign", or "second_eye_verifier"
+      verified_by: emp_data?.emp_name,
+      role: emp_data?.emp_role,
+    });
+
+    // Update local state immediately for UI
+    setSelectedReport(prev => ({
+      ...prev,
+      [field]: emp_data?.emp_name,
+      [`${field}_role`]: emp_data?.emp_role,
+      [`${field}_verified_at`]: new Date().toISOString(),
+    }));
+
+    // Show success alert with icon
+    alert("✅ " + (response.data?.message || "Verified successfully!"));
+
+    // Reload table data
+    window.location.reload();
+
+  } catch (error) {
+    console.error("Verification failed:", error);
+
+    // Extract message from backend if available
+    const msg =
+      error.response?.data?.message ||
+      "Failed to verify. Please try again.";
+
+    // Show error alert with icon
+    alert("❌ " + msg);
+  }
+};
+
+
+
+
 // Action buttons kasama ang Edit
 const dataWithAction = tableData.data.map((r) => ({
   ...r,
+
+  senior_tech: (
+    <span
+      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+        r.senior_tech ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+      }`}
+    >
+      {r.senior_tech || "Pending..."}
+    </span>
+  ),
+  qa_sign: (
+    <span
+      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+        r.qa_sign ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+      }`}
+    >
+      {r.qa_sign || "Pending..."}
+    </span>
+  ),
+  second_eye_verifier: (
+    <span
+      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+        r.second_eye_verifier ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+      }`}
+    >
+      {r.second_eye_verifier || "Pending..."}
+    </span>
+  ),
   action: (
     <div className="flex gap-2">
       {/* View Button */}
@@ -183,6 +281,9 @@ const dataWithAction = tableData.data.map((r) => ({
                     { key: "performed_by", label: "Performed By" },
                     { key: "date_performed", label: "Date Performed" },
                     { key: "due_date", label: "Due Date" },
+                    { key: "senior_tech", label: "Technician" },
+                    { key: "qa_sign", label: "QA" },
+                    { key: "second_eye_verifier", label: "Second Eye Verifier" },
                     { key: "action", label: "Action"},
                 ]}
                 data={dataWithAction}
@@ -229,32 +330,80 @@ const dataWithAction = tableData.data.map((r) => ({
                                 </div>
 
                                 {/* Header Inputs */}
-                                <table className="w-half border border-black mb-4">
-                                    <tbody>
-                                        {[
-                                            { label: "MACHINE NUMBER", name: "equipment" },
-                                            { label: "CONTROL NUMBER", name: "control_no" },
-                                            { label: "SERIAL NUMBER", name: "serial_no" },
-                                            { label: "PERFORMED BY", name: "performed_by" },
-                                            { label: "DATE PERFORMED", name: "date_performed" },
-                                            { label: "DUE DATE", name: "due_date" },
-                                        ].map((field, i) => (
-                                            <tr key={i}>
-                                                <td className="border border-black px-2 py-1 font-semibold w-1/3">{field.label} :</td>
-                                                <td className="border border-black px-2 py-1">
-                                                    <input
-                                                        type="text"
-                                                        name={field.name}
-                                                        value={formData[field.name]}
-                                                        onChange={handleChange}
-                                                        className="w-full border px-1 py-1 border-gray-400 rounded-md"
-                                                        readOnly={["performed_by", "date_performed", "due_date"].includes(field.name)}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                {/* Header Inputs */}
+<table className="w-half border border-black mb-4">
+  <tbody>
+    {/* MACHINE NUMBER with AntD Select */}
+    <tr>
+      <td className="border border-black px-2 py-1 font-semibold w-1/3">
+        MACHINE NUMBER:
+      </td>
+      <td className="border border-black px-2 py-1">
+        <Select
+          showSearch
+          placeholder="Select or type machine..."
+          optionFilterProp="children"
+          value={formData.equipment || undefined}
+          onChange={(value) => {
+            const machine = machines.find((m) => m.machine_num === value);
+            if (!machine) {
+              setFormData((prev) => ({
+                ...prev,
+                equipment: value,
+              }));
+              return;
+            }
+            setFormData((prev) => ({
+              ...prev,
+              equipment: value,
+              control_no: machine?.pmnt_no ?? machine?.control_no ?? "",
+              serial_no: machine?.serial ?? machine?.serial_no ?? "",
+              performed_by: emp_data?.emp_name || "",
+              date_performed: formattedToday,
+              due_date: formattedNextYear,
+            }));
+          }}
+          filterOption={(input, option) =>
+            option.children.toLowerCase().includes(input.toLowerCase())
+          }
+          style={{ width: "100%" }}
+        >
+          {machines.map((m, i) => (
+            <Select.Option key={i} value={m.machine_num}>
+              {m.machine_num}
+            </Select.Option>
+          ))}
+        </Select>
+      </td>
+    </tr>
+
+    {/* Other header fields */}
+    {[
+      { label: "CONTROL NUMBER", name: "control_no" },
+      { label: "SERIAL NUMBER", name: "serial_no" },
+      { label: "PERFORMED BY", name: "performed_by" },
+      { label: "DATE PERFORMED", name: "date_performed" },
+      { label: "DUE DATE", name: "due_date" },
+    ].map((field, i) => (
+      <tr key={i}>
+        <td className="border border-black px-2 py-1 font-semibold w-1/3">
+          {field.label} :
+        </td>
+        <td className="border border-black px-2 py-1">
+          <input
+            type="text"
+            name={field.name}
+            value={formData[field.name]}
+            onChange={handleChange}
+            className="w-full border px-1 py-1 border-gray-400 rounded-md"
+            readOnly={["performed_by", "date_performed", "due_date"].includes(field.name)}
+          />
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
 
                                 <p className="font-semibold mb-2">REFERENCE PM PROCEDURE SPECIFICATION : TFP05-001</p>
 
@@ -395,6 +544,8 @@ const dataWithAction = tableData.data.map((r) => ({
     <div className="relative bg-white w-[60vw] h-[95vh] shadow-xl flex flex-col">
       {/* Header */}
       <div className="flex justify-end items-center p-4 border-b">
+
+        
         
         <button
           className="text-red-500 hover:text-red-700 font-bold"
@@ -409,6 +560,18 @@ const dataWithAction = tableData.data.map((r) => ({
        <div className="p-6 text-black text-sm font-sans">
   {/* Title */}
   <div className="text-center mb-4">
+   <div className="flex justify-end items-center">
+             {selectedReport.second_eye_verifier && (
+    <a
+      href={route("granite.pdf", selectedReport.id)}
+      target="_blank"
+      className="px-3 py-2 bg-gray-100 text-red-600 rounded shadow hover:bg-red-700 hover:text-white border-2 border-red-600 hover:border-gray-500 flex items-center text-bold"
+    >
+      <i className="fa-solid fa-file-pdf"></i>
+      View as PDF
+    </a>
+  )}
+    </div>
     <h1 className="text-3xl font-bold text-orange-700">
       GRANITE TABLE
     </h1>
@@ -464,9 +627,9 @@ const dataWithAction = tableData.data.map((r) => ({
           <td className="border border-black">{row.item}</td>
           <td className="border border-black">{row.req}</td>
           <td className="border border-black text-center">{row.activity}</td>
-          <td className="border border-black">{row.actual}</td>
+          <td className="border border-black text-center">{row.actual}</td>
           <td className="border border-black text-center">{row.freq}</td>
-          <td className="border border-black">{row.remarks}</td>
+          <td className="border border-black text-center">{row.remarks}</td>
         </tr>
       ))}
     </tbody>
@@ -516,9 +679,9 @@ const dataWithAction = tableData.data.map((r) => ({
             <td className="border border-black text-center">
               {row.required}
             </td>
-            <td className="border border-black">{row.actual}mm</td>
+            <td className="border border-black text-center">{row.actual}mm</td>
             <td className="border border-black text-center">{row.result}</td>
-            <td className="border border-black">{row.remarks}</td>
+            <td className="border border-black text-center">{row.remarks}</td>
           </tr>
         ))}
 
@@ -534,9 +697,9 @@ const dataWithAction = tableData.data.map((r) => ({
             <td className="border border-black text-center">
               {row.required}
             </td>
-            <td className="border border-black">{row.actual}mm</td>
+            <td className="border border-black text-center">{row.actual}mm</td>
             <td className="border border-black text-center">{row.result}</td>
-            <td className="border border-black">{row.remarks}</td>
+            <td className="border border-black text-center">{row.remarks}</td>
           </tr>
         ))}
     </tbody>
@@ -545,37 +708,95 @@ const dataWithAction = tableData.data.map((r) => ({
 {/* Verification */}
 <div className="flex justify-end">
   <table className="w-1/2 mb-4 text-sm">
+    <tbody>
+      <tr>
+        <td
+          className="border-r border-black font-semibold text-center align-middle"
+          rowSpan={3}
+        >
+          VERIFIED BY:
+        </td>
 
-  <tbody>
-    <tr>
-      {/* Left title */}
-      <td
-        className="border-r border-black font-semibold text-center align-middle"
-        rowSpan={3}
-      >
-        VERIFIED BY:
-      </td>
+        <td className="border border-black px-3 py-2 flex justify-between items-center">
+          <span>
+            Technician:{" "}
+           <span
+      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+        selectedReport.senior_tech ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+      }`}
+    >
+              {selectedReport.senior_tech || "Pending..."}
+            </span>
+          </span>
 
-      {/* Right rows */}
-      <td className="border border-black px-3 py-2">
-        Technician: {selectedReport.senior_tech || "Pending..."}
-      </td>
-    </tr>
+          {["pmtech", "toolcrib", "seniortech", "tooling"].includes(emp_data?.emp_role) &&
+           !selectedReport.senior_tech && (
+            <button
+              className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+              onClick={() => handleVerify("senior_tech")}
+            >
+              <i className="fas fa-check"></i> Verify
+            </button>
+          )}
+        </td>
+      </tr>
 
-    <tr>
-      <td className="border border-black px-3 py-2">
-        QA: {selectedReport.qa_sign || "Pending..."}
-      </td>
-    </tr>
+      <tr>
+        <td className="border border-black px-3 py-2 flex justify-between items-center">
+          <span>
+            QA:{" "}
+              <span
+      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+        selectedReport.qa_sign ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+      }`}
+    >
+              {selectedReport.qa_sign || "Pending..."}
+            </span>
+          </span>
 
-    <tr>
-      <td className="border border-black px-3 py-2">
-        Second Eye Verifier: {selectedReport.second_eye_verifier || "Pending..."}
-      </td>
-    </tr>
-  </tbody>
-</table>
+          {["esd"].includes(emp_data?.emp_role) &&
+           selectedReport.senior_tech &&
+           !selectedReport.qa_sign && (
+            <button
+              className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+              onClick={() => handleVerify("qa_sign")}
+            >
+              <i className="fas fa-check"></i> Verify
+            </button>
+          )}
+        </td>
+      </tr>
+
+      <tr>
+        <td className="border border-black px-3 py-2 flex justify-between items-center">
+          <span>
+            Second Eye Verifier:{" "}
+              <span
+      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+        selectedReport.second_eye_verifier ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+      }`}
+    >
+              {selectedReport.second_eye_verifier || "Pending..."}
+            </span>
+          </span>
+
+          {["engineer"].includes(emp_data?.emp_role) &&
+           selectedReport.senior_tech &&
+           selectedReport.qa_sign &&
+           !selectedReport.second_eye_verifier && (
+            <button
+              className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+              onClick={() => handleVerify("second_eye_verifier")}
+            >
+              <i className="fas fa-check"></i> Verify
+            </button>
+          )}
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>
+
 
 
  {/* Legend */}
@@ -618,6 +839,7 @@ const dataWithAction = tableData.data.map((r) => ({
 
       {/* Footer */}
       <div className="flex justify-end p-4 border-t">
+   
         <button
           className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700"
           onClick={() => setViewModal(false)}

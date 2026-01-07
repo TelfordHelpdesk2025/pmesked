@@ -17,8 +17,7 @@ export default function NavLinks() {
                 }
                 // notifications={5}
             />
-            {["tooling"].includes(emp_data?.emp_role) && (
-                <div>
+           
             <SidebarLink
                 href={route("non-tnr.granite")}
                 label="Granite Checklist"
@@ -27,8 +26,6 @@ export default function NavLinks() {
                 }
                 // notifications={5}
             />
-                </div>
-            )}
             {["pmtech", "toolcrib", "seniortech", "engineer"].includes(emp_data?.emp_role) && (
                 <div>
                      <Dropdown
