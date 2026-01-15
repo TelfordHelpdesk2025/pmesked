@@ -104,6 +104,7 @@ export default function Form({ platforms, manufacturers, auth }) {
                                 required
                                 >
                                 <option value="">-- Select Platform --</option>
+                                <option value="Manual Tape & Reel">Manual Tape & Reel</option>
                                 <option value="V12">V12</option>
                                 <option value="ISMECA">ISMECA</option>
                                 <option value="ST60">ST60</option>

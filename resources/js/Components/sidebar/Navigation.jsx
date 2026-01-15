@@ -110,15 +110,7 @@ export default function NavLinks() {
                         // notification: 125,
                     },
 
-                    {
-                        href: route("non-tnr.granite"),
-                        label: "Granite Checklist",
-                        icon: (
-                        <i className="far fa-square"></i>
-                        ),
-                        className: "opacity-50 pointer-events-none",
-                        // notification: 125,
-                    },
+                    
                     
                 ]}
                 // notification={true}
@@ -158,7 +150,7 @@ export default function NavLinks() {
 
                     {
                         href: route("calibration.IonizerCalibrationReport"),
-                        label: "Ionizer Calibration Report",
+                        label: "DTHM Calibration Report",
                         icon: (
                         <i className="far fa-square"></i>
                         ),
@@ -295,7 +287,7 @@ export default function NavLinks() {
 
                     {
                         href: route("ionizer.ionizer.mass.approval"),
-                        label: "Ionizer Calibration Report",
+                        label: "DTHM Calibration Report",
                         icon: (
                         <i className="far fa-square"></i>
                         ),

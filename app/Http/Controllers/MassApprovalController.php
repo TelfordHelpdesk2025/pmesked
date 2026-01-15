@@ -177,35 +177,22 @@ class MassApprovalController extends Controller
     // Helpers (session-based)
     private function isTech($empData)
     {
-        return in_array($empData['emp_jobtitle'] ?? '', [
-            "Senior Equipment Technician",
-            "Equipment Technician 1",
-            "Equipment Technician 2",
-            "Equipment Technician 3",
-            "PM Technician 1",
-            "PM Technician 2",
+        return in_array($empData['emp_role'] ?? '', [
+            "seniortech",
         ]);
     }
 
     private function isQA($empData)
     {
-        return in_array($empData['emp_jobtitle'] ?? '', [
-            "ESD Technician 1",
-            "ESD Technician 2",
-            "Senior QA Engineer",
-            "DIC Clerk 1",
+        return in_array($empData['emp_role'] ?? '', [
+            "esd",
         ]);
     }
 
     private function isEngineer($empData)
     {
-        return in_array($empData['emp_jobtitle'] ?? '', [
-            "Equipment Engineer",
-            "Supervisor - Equipment Technician",
-            "Senior Equipment Engineer",
-            "Sr. Equipment Engineer",
-            "Equipment Engineering Section Head",
-            "Section Head - Equipment Engineering",
+        return in_array($empData['emp_role'] ?? '', [
+            "engineer",
         ]);
     }
 }

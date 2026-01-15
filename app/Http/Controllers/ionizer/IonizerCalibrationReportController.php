@@ -76,6 +76,18 @@ class IonizerCalibrationReportController extends Controller
 
         IonizerCalibrationReport::create($validated);
 
+        $equipment = $request->input('equipment');
+
+        DB::connection('server201')
+            ->table('dthm_inventory_tbl')
+            ->where('eqpmnt_description', $equipment)
+            ->update([
+                'report_no' => $validated['report_no'] + 1,
+                'eqpmnt_cal_date' => $validated['calibration_date'],
+                'eqpmnt_cal_due' => $validated['calibration_due'],
+                'calibrated_by' => $validated['performed_by']
+            ]);
+
         return redirect()->back()->with('success', 'Ionizer Calibration Report saved successfully!');
     }
 
@@ -147,6 +159,15 @@ class IonizerCalibrationReportController extends Controller
         $report->review_by = session('emp_data')['emp_name'] ?? null;
         $report->review_date = now();
         $report->save();
+
+        $equipment = $report->equipment;
+
+        DB::connection('server201')
+            ->table('dthm_inventory_tbl')
+            ->where('eqpmnt_description', $equipment)
+            ->update([
+                'reviewed_by' => $report['review_by'],
+            ]);
 
         return back()->with([
             'success' => 'Report verified by Reviewer!',

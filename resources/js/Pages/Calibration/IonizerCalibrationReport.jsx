@@ -150,32 +150,77 @@ const handleMachineChange = (e) => {
     return;
   }
 
-  // Compute PM week
-  const today = new Date();
-  const pmDateWW = getWorkWeek(today);
+ // Helper: format date as MM/DD/YYYY
+const formatDate = (date) => {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+};
 
-  const dueDate = new Date(today);
-  dueDate.setDate(today.getDate() + 7);
-  const pmDueWW = getWorkWeek(dueDate);
+// Quarterly computation
+const today = new Date();
+const calibrationDate = formatDate(today);
+
+const dueDate = new Date(today);
+dueDate.setMonth(dueDate.getMonth() + 3); // ✅ quarterly
+const calibrationDue = formatDate(dueDate);
+
 
   setData((prev) => ({
     ...prev,
     equipment: selected,
-    model: machine?.eqpmnt_model ?? machine?.machine_model ?? "",
-    serial: machine?.eqpmnt_serial_no ?? machine?.serial_no ?? "",
-    manufacturer: machine?.eqpmnt_manufacturer ?? machine?.manufacturer ?? "",
-    control_no: machine?.eqpmnt_control_no ?? machine?.control_no ?? "",
+    model: machine?.eqpmnt_model ?? "",
+    serial: machine?.eqpmnt_serial_no ?? "",
+    manufacturer: machine?.eqpmnt_manufacturer ?? "",
+    control_no: machine?.eqpmnt_control_no ?? "",
     
-    calibration_date: pmDateWW,
-    calibration_due: pmDueWW,
+    calibration_date: calibrationDate,
+    calibration_due: calibrationDue,
     performed_by: empData?.emp_name || user?.name || "",
     temperature: "",
     relative_humidity: "",
-    report_no: machine?.report_no ?? machine?.report_no ?? "",
-    specs: machine?.cal_specs_no ?? machine?.specs ?? "",
-    cal_interval: machine?.cal_interval ?? machine?.cal_interval ?? "",
+    report_no: machine?.report_no ?? "",
+    specs: machine?.cal_specs_no ?? "",
+    cal_interval: machine?.cal_interval ?? "",
+
+    // Default values for calibration standards
+    cal_std_use: [
+      {
+        description: machine?.instrument_description ?? "",
+        cal_manufacturer: machine?.instrument ?? "",
+        model_no: machine?.instrument_model ?? "",
+        cal_control_no: machine?.instrument_control_no ?? "",
+        serial_no: machine?.instrument_serial_no ?? "",
+        accuracy: machine?.accuracy ?? "",
+        cal_date: machine?.instrument_cal_date ?? "",
+        cal_due: machine?.instrument__cal_due ?? "",
+        traceability: machine?.tracebility ?? "",
+        
+      },
+    ],
   }));
+
+  const autoStandards = [
+  {
+    description: machine?.instrument_description ?? "",
+    cal_manufacturer: machine?.instrument ?? "",
+    model_no: machine?.instrument_model ?? "",
+    cal_control_no: machine?.instrument_control_no ?? "",
+    serial_no: machine?.instrument_serial_no ?? "",
+    accuracy: machine?.accuracy ?? "",
+    cal_date: machine?.instrument_cal_date ?? "",
+    cal_due: machine?.instrument__cal_due ?? "",
+    traceability: machine?.tracebility ?? "",
+  },
+];
+
+setStandards(autoStandards);
+setData("cal_std_use", autoStandards);
+
 };
+
+
 
 
   // 🔹 Table row handlers
@@ -281,15 +326,15 @@ const handleSubmit = () => {
   }
 
   // 🔹 Validate details table
-  for (let i = 0; i < details.length; i++) {
-    const d = details[i];
-    for (const [key, value] of Object.entries(d)) {
-      if (!value?.toString().trim()) {
-        alert(`❌ Please fill in "${key.replace(/_/g, " ")}" in Details row ${i + 1}.`);
-        return;
-      }
-    }
-  }
+  // for (let i = 0; i < details.length; i++) {
+  //   const d = details[i];
+  //   for (const [key, value] of Object.entries(d)) {
+  //     if (!value?.toString().trim()) {
+  //       alert(`❌ Please fill in "${key.replace(/_/g, " ")}" in Details row ${i + 1}.`);
+  //       return;
+  //     }
+  //   }
+  // }
 
   // 🔹 Filter empty rows (safety)
   const filteredStandards = standards.filter((s) =>
@@ -359,6 +404,8 @@ router.delete(route("calibration-reports.ionizer.destroy", id), {
     },
 });
 };
+
+
 
 
 const dataWithAction = reports.data.map((r) => ({
@@ -655,7 +702,7 @@ const handleVerifyReviewer = () => {
                     onChange={(e) =>
                       setData("calibration_date", e.target.value)
                     }
-                    className="border p-2 rounded w-full text-gray-600"
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
                     readOnly
                   />
                 </div>
@@ -663,15 +710,33 @@ const handleVerifyReviewer = () => {
                   <label className="block font-semibold text-gray-500">
                     Calibrated By
                   </label>
-                  <div className="relative">
-                    <input
-                      name="performed_by"
-                      value={data.performed_by}
-                      readOnly
-                      className="border p-2 rounded bg-gray-100 text-sky-400 pl-8 w-full"
-                    />
-                    <i className="fas fa-user-gear absolute left-2 top-1/2 transform -translate-y-1/2 text-sky-300"></i>
-                  </div>
+                  <div className="relative group">
+  <input
+    name="performed_by"
+    value={data.performed_by}
+    readOnly
+    className="
+      border p-2 rounded bg-gray-100
+      text-indigo-700 pl-8 w-full
+      transition
+      group-hover:bg-indigo-700
+      group-hover:text-white
+      focus:bg-indigo-700
+      focus:text-white
+    "
+  />
+  <i
+    className="
+      fas fa-user-gear
+      absolute left-2 top-1/2 -translate-y-1/2
+      text-indigo-700
+      transition
+      group-hover:text-white
+      group-focus-within:text-white
+    "
+  ></i>
+</div>
+
                 </div>
                 </div>
                 <div className="grid grid-cols-4 gap-4 mb-6 mt-4">
@@ -697,7 +762,7 @@ const handleVerifyReviewer = () => {
                     name="calibration_due"
                     value={data.calibration_due}
                     onChange={(e) => setData("calibration_due", e.target.value)}
-                    className="border p-2 rounded w-full text-gray-600"
+                    className="border p-2 rounded w-full text-gray-600 bg-gray-100"
                     readOnly
                   />
                 </div>
@@ -736,7 +801,8 @@ const handleVerifyReviewer = () => {
                             name={key}
                             value={row[key]}
                             onChange={(e) => handleStandardChange(i, e)}
-                            className="w-full border p-1 rounded"
+                            className="w-full border p-1 rounded text-gray-600 bg-gray-100"
+                            readOnly
                           />
                         </td>
                       ))}
@@ -993,25 +1059,25 @@ const handleVerifyReviewer = () => {
       {/* Footer Close (redundant but okay) */}
       <div className="flex justify-end mt-4">
           {/* Verification button logic */}
-          {isQA && !selectedReport?.qa_sign && (
-           <button
-             onClick={handleVerifyQA}
-             className="px-4 py-2 border rounded bg-green-500 text-white hover:bg-green-600 mr-2"
-           >
-             <i className="fas fa-check mr-2"></i>
-             Verify (QA)
-            </button>
-          )}
+           {isQA && !selectedReport?.qa_sign && (
+  <button
+      onClick={handleVerifyQA}
+    className="px-4 py-2 border rounded bg-green-500 text-white hover:bg-green-600 mr-2"
+  >
+    <i className="fas fa-check mr-2"></i>
+    Verify (QA)
+  </button>
+)}
 
-          {isEngineer && selectedReport?.qa_sign && !selectedReport?.review_by && (
-            <button
-             onClick={handleVerifyReviewer}
-             className="px-4 py-2 border rounded bg-blue-500 text-white hover:bg-blue-600 mr-2"
-            >
-             <i className="fas fa-user-cog mr-2"></i>
-             Verify (Reviewer)
-            </button>
-          )}
+{isEngineer && selectedReport?.qa_sign && !selectedReport?.review_by && (
+  <button
+     onClick={handleVerifyReviewer}
+    className="px-4 py-2 border rounded bg-blue-500 text-white hover:bg-blue-600 mr-2"
+  >
+    <i className="fas fa-user-cog mr-2"></i>
+    Verify (Reviewer)
+  </button>
+)}
 
         {/* Close */}
         <button

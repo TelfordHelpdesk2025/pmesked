@@ -72,13 +72,13 @@ class DthmController extends Controller
 
         $control_no = $request->input('control_no');
 
-        DB::connection('server201')
-            ->table('dthm_inventory_tbl')
-            ->where('eqpmnt_control_no', $control_no)
-            ->update([
-                'eqpmnt_cal_date' => $validated['cal_date'],
-                'eqpmnt_cal_due' => $validated['cal_due']
-            ]);
+        // DB::connection('server201')
+        //     ->table('dthm_inventory_tbl')
+        //     ->where('eqpmnt_control_no', $control_no)
+        //     ->update([
+        //         'eqpmnt_cal_date' => $validated['cal_date'],
+        //         'eqpmnt_cal_due' => $validated['cal_due']
+        //     ]);
 
         return redirect()->back()->with('success', '✅ Record added successfully!');
     }

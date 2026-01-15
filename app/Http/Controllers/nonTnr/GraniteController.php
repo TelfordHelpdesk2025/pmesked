@@ -25,14 +25,14 @@ class GraniteController extends Controller
 
         $machines = DB::connection('server25')
             ->table('machine_list')
-            ->select('machine_num', 'pmnt_no', 'serial', 'machine_platform', 'machine_type')
-            ->where('machine_platform', 'Like', '%granite%')
+            ->select('machine_num', 'pmnt_no', 'serial', 'platform', 'machine_type')
+            ->where('platform', 'Like', '%granite%')
             ->where('machine_type', 'Like', '%granite%')
             ->whereNotNull('machine_num')
             ->where('machine_num', '!=', '')
             ->where('machine_num', '!=', 'N/A')
             ->distinct()
-            ->orderBy('machine_platform', 'asc')
+            ->orderBy('platform', 'asc')
             ->get();
 
 
