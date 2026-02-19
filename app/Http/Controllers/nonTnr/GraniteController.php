@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use App\Models\GraniteChecklist;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class GraniteController extends Controller
 {
@@ -31,6 +32,13 @@ class GraniteController extends Controller
             ->whereNotNull('machine_num')
             ->where('machine_num', '!=', '')
             ->where('machine_num', '!=', 'N/A')
+            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+            ->whereIn('pmnt_no', function ($query) {
+                $query->select('pmnt_no')
+                    ->from('machine_list')
+                    ->groupBy('pmnt_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })
             ->distinct()
             ->orderBy('platform', 'asc')
             ->get();
@@ -165,5 +173,20 @@ class GraniteController extends Controller
             'procedureSpecs',
             'flatness'
         ))->setPaper('A4')->stream('granite.pdf');
+    }
+
+
+
+    public function delete($id)
+    {
+        $checklist = DB::connection('server201')->table('granite_tbl')->where('id', $id)->first();
+
+        if (!$checklist) {
+            abort(404); // or throw new ModelNotFoundException
+        }
+
+        DB::connection('server201')->table('granite_tbl')->where('id', $id)->delete();
+
+        return back()->with('success', 'Granite checklist deleted successfully!');
     }
 }

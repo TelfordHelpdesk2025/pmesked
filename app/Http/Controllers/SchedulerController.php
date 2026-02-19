@@ -100,7 +100,15 @@ class SchedulerController extends Controller
         // ✅ Machines para sa dropdown
         $machines = Machine::select('machine_num', 'pmnt_no', 'serial', 'machine_platform')
             ->whereNotNull('machine_num')
+            ->whereNotIn('status', ['Write-Off'])
+            ->whereNotIn('platform', ['NON TNR', 'NON T&R', 'IONIZER', 'N/A', 'Granite', '-'])
             ->where('machine_num', '!=', '')
+            ->whereIn('pmnt_no', function ($query) {
+                $query->select('pmnt_no')
+                    ->from('machine_list')
+                    ->groupBy('pmnt_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })
             ->distinct()
             ->orderBy('machine_platform')
             ->get();

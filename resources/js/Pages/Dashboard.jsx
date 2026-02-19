@@ -74,7 +74,7 @@ export default function Dashboard(props) {
   // Job groups (reuse)
   const qaJobs = ["esd"];
 
-  const eeJobs = ["engineer"];
+  const eeJobs = ["superadmin","admin","engineer"];
 
   const combinedJobs = [...qaJobs, ...eeJobs];
 

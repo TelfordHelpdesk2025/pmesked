@@ -237,7 +237,7 @@ const handleChange = (e) => {
         frequency: "",
         performed_by: empData?.emp_name || "",
       });
-      setError(`Machine "${value}" not found. Please add it first in the inventory.`);
+      setError(`Item "${value}" not found. Please add it first in the inventory.`);
     }
     return; // ✅ stop here para hindi tuloy sa ibang logic
   }
@@ -598,7 +598,7 @@ const handleChange = (e) => {
 
                 {/* --- Check Items --- */}
                 <h3 className="text-violet-800 mb-2 font-bold"><i className="fa-solid fa-list-check"></i> Check Items</h3>
-                <div className="text-center my-3 bg-gradient-to-r from-white to-gray-500 text-rose-800 rounded">
+                <div className="text-center my-3 bg-gradient-to-r from-white to-gray-200 text-cyan-700 rounded">
                   <h5 className="font-semibold p-2 pt-4"><i className="fa-solid fa-bars-staggered"></i> ACTIVITY CODE</h5>
                   <p className=" text-sm p-2 pb-4 ">
                    A - Check ; B - Clean ; C - Lubricant ; D - Adjust ; E - Align ; 

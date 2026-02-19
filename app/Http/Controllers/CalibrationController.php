@@ -26,7 +26,13 @@ class CalibrationController extends Controller
     {
         $platforms = DB::connection('server25')->table('machine_list')
             ->whereNotNull('machine_platform')
-            ->where('machine_platform', '!=', '')   // alisin ang empty string
+            ->where('machine_platform', '!=', '')
+            ->whereIn('pmnt_no', function ($query) {
+                $query->select('pmnt_no')
+                    ->from('machine_list')
+                    ->groupBy('pmnt_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })   // alisin ang empty string
             ->pluck('machine_platform')
             ->unique()
             ->values();

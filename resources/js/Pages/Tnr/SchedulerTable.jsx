@@ -4,8 +4,12 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import DataTable from "@/Components/DataTable";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { Select } from "antd";
+
 
 export default function SchedulerTable({ tableData, empData, tableFilters, machines, emp_data}) {
+
+  const { Option } = Select;
   // 🔹 PDF Download
   const handleDownloadPDF = () => {
     const input = document.getElementById("modal-content");
@@ -153,44 +157,44 @@ const handleMachineChange = (e) => {
 
 
   // 🔹 Handle Platform Change (Manual options + Fetch checklist)
-  const handlePlatformChange = async (e) => {
-    const selectedPlatform = e.target.value;
-    setFormData((prev) => ({ ...prev, machinePlatform: selectedPlatform }));
+const handlePlatformChange = async (selectedPlatform) => {
+  setFormData((prev) => ({ ...prev, machinePlatform: selectedPlatform }));
 
-    if (!selectedPlatform) {
-      setSelectedChecklist([]);
-      setAnswers({});
-      return;
-    }
+  if (!selectedPlatform) {
+    setSelectedChecklist([]);
+    setAnswers({});
+    return;
+  }
 
-    try {
-      const res = await fetch(`/checklist/${selectedPlatform}`);
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+  try {
+    const res = await fetch(`/checklist/${selectedPlatform}`);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
-      const data = await res.json();
-      setSelectedChecklist(data);
+    const data = await res.json();
+    setSelectedChecklist(data);
 
-      const initialAnswers = {};
-      data.forEach((row) => {
-        initialAnswers[row.id] = {
-          assy_item: row.assy_item,
-          description: row.description,
-          requirements: row.requirements,
-          activity_1: row.activity_1,
-          compliance1: 0,
-          remarks1: "PASSED",
-          activity_2: row.activity_2,
-          compliance2: 0,
-          remarks2: "PASSED",
-        };
-      });
-      setAnswers(initialAnswers);
-    } catch (err) {
-      console.error("❌ Error fetching checklist:", err.message);
-      setSelectedChecklist([]);
-      setAnswers({});
-    }
-  };
+    const initialAnswers = {};
+    data.forEach((row) => {
+      initialAnswers[row.id] = {
+        assy_item: row.assy_item,
+        description: row.description,
+        requirements: row.requirements,
+        activity_1: row.activity_1,
+        compliance1: 0,
+        remarks1: "PASSED",
+        activity_2: row.activity_2,
+        compliance2: 0,
+        remarks2: "PASSED",
+      };
+    });
+    setAnswers(initialAnswers);
+  } catch (err) {
+    console.error("❌ Error fetching checklist:", err.message);
+    setSelectedChecklist([]);
+    setAnswers({});
+  }
+};
+
 
   const handleVerify = (activityId) => {
   if (!empData?.emp_jobtitle) {
@@ -583,68 +587,95 @@ const handleCheckAll = (e, complianceField) => {
 
               {/* Body */}
               <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block font-semibold text-gray-500">Machine</label>
+<div>
+  <label className="block font-semibold text-gray-500">Machine</label>
+  <Select
+    showSearch
+    allowClear
+    placeholder="Select or type machine..."
+    value={formData.machine || undefined}
+    onChange={(value) => {
+      // Find the selected machine object
+      const machine = machines.find((m) => m.machine_num === value);
+      if (!machine) return;
 
-                  <input
-  list="machineList"
-  name="machine"
-  className="border rounded w-full text-gray-500 p-1"
-  value={formData.machine}
-  onChange={handleMachineChange}
-  placeholder="Select or type here..."
-  required
-/>
+      // Set formData fields
+      let progress_value = 25;
 
-<datalist id="machineList">
-  {machines.map((m, i) => (
-    <option key={i} value={m.machine_num} />
-  ))}
-</datalist>
+      setFormData((prev) => ({
+        ...prev,
+        machine: value,
+        controlNo: machine?.pmnt_no || "",
+        serial: machine?.serial || "",
+        pmDate: pmDateWW,
+        pmDue: pmDueWW,
+        progress_value,
+        performedBy: empData?.emp_name || "",
+      }));
 
-                </div>
+      // Clear checklist + answers
+      setSelectedChecklist([]);
+      setAnswers({});
+    }}
+    filterOption={(input, option) =>
+      option.value.toLowerCase().includes(input.toLowerCase())
+    }
+    className="w-full p-2 border border-gray-500 rounded"
+  >
+    {machines.map((m, i) => (
+      <Option key={i} value={m.machine_num}>
+        {m.machine_num}
+      </Option>
+    ))}
+  </Select>
+</div>
+
 
                 <div>
                   <label className="block font-semibold text-gray-500">
                     Platform
                   </label>
-                  <select
-                    value={formData.machinePlatform}
-                    onChange={handlePlatformChange}
-                    className="border rounded w-full text-gray-700 p-2"
-                    required
-                  >
-                    <option value="">-- Select Platform --</option>
-                    <option value="V12">V12</option>
-                    <option value="ISMECA">ISMECA</option>
-                    <option value="ST60">ST60</option>
-                    <option value="BRANDING (DYSEC_DIPBR_SOLAS DUM-815)">
-                      BRANDING (DYSEC_DIPBR_SOLAS DUM-815)
-                    </option>
-                    <option value="MH3020">MH3020</option>
-                    <option value="LASER MARKING">LASER MARKING</option>
-                    <option value="HOPE SEIKI">HOPE SEIKI</option>
-                    <option value="HEPCO">HEPCO</option>
-                    <option value="BAKE OVEN">BAKE OVEN</option>
-                    <option value="G6L">G6L</option>
-                    <option value="VITROX TR3000i">VITROX TR3000i</option>
-                    <option value="VITROX TR1000i2000iTR3000i">
-                      VITROX TR1000i2000iTR3000i
-                    </option>
-                    <option value="HSI200">HSI200</option>
-                    <option value="HSI250">HSI250</option>
-                    <option value="HSI400T">HSI400T</option>
-                    <option value="HEXA">HEXA</option>
-                    <option value="AT28">AT28</option>
-                    <option value="AT128">AT128</option>
-                    <option value="AT268_AT468">AT268_AT468</option>
-                    <option value="AT8005">AT8005</option>
-                    <option value="MICROVISION_MV853A">
-                      MICROVISION_MV853A
-                    </option>
-                    <option value="MV883">MV883</option>
-                    <option value="MV996">MV996</option>
-                  </select>
+                  <Select
+  showSearch
+  allowClear
+  value={formData.machinePlatform}
+  placeholder="Select or type platform..."
+  onChange={(value) => handlePlatformChange(value)} // <-- value is already string
+  filterOption={(input, option) =>
+    option.value.toLowerCase().includes(input.toLowerCase())
+  }
+   className="w-full p-2 border border-gray-500 rounded"
+>
+  {[
+    "V12",
+    "ISMECA",
+    "ST60",
+    "BRANDING (DYSEC_DIPBR_SOLAS DUM-815)",
+    "MH3020",
+    "LASER MARKING",
+    "HOPE SEIKI",
+    "HEPCO",
+    "BAKE OVEN",
+    "G6L",
+    "VITROX TR3000i",
+    "VITROX TR1000i2000iTR3000i",
+    "HSI200",
+    "HSI250",
+    "HSI400T",
+    "HEXA",
+    "AT28",
+    "AT128",
+    "AT268_AT468",
+    "AT8005",
+    "MICROVISION_MV853A",
+    "MV883",
+    "MV996",
+  ].map((p, i) => (
+    <Option key={i} value={p}>
+      {p}
+    </Option>
+  ))}
+</Select>
                 </div>
 
                 <div>

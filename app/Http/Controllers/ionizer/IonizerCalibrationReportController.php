@@ -27,9 +27,16 @@ class IonizerCalibrationReportController extends Controller
             ->whereNotIn('location', ['-', 'N/A'])
             ->whereNotNull('ip_address')
             ->where('ip_address', '<>', '-')
-            ->whereRaw("LOWER(status) = ?", ['active'])
+            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+            ->whereIn('eqpmnt_control_no', function ($query) {
+                $query->select('eqpmnt_control_no')
+                    ->from('dthm_inventory_tbl')
+                    ->groupBy('eqpmnt_control_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })
             ->orderBy('eqpmnt_control_no', 'asc')
             ->distinct()
+
             ->get();
 
         return Inertia::render('Calibration/IonizerCalibrationReport', [

@@ -23,6 +23,13 @@ class NonTnrCalibrationReportController extends Controller
         $machines = Machine::select('*')
             ->whereNotNull('machine_num')
             ->where('machine_num', '!=', '')
+            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+            ->whereIn('pmnt_no', function ($query) {
+                $query->select('pmnt_no')
+                    ->from('machine_list')
+                    ->groupBy('pmnt_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })
             ->distinct()
             ->orderBy('machine_platform', 'asc')
             ->get();

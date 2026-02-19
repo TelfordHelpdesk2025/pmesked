@@ -203,7 +203,20 @@ const handleVerify = async (field) => {
   }
 };
 
+const handleRemoveGranite = (id) => {
+  if (!confirm("Are you sure you want to remove this Item?")) return;
 
+  // Pag-delete sa front-end
+router.delete(route("granite.delete", id), {
+    onSuccess: () => {
+        alert("✅ Granite checklist removed successfully!");
+        window.location.reload();
+    },
+    onError: () => {
+        alert("❌ Failed to remove granite!");
+    },
+});
+};
 
 
 // Action buttons kasama ang Edit
@@ -247,8 +260,19 @@ const dataWithAction = tableData.data.map((r) => ({
     setViewModal(true);
   }}
 >
-  <i className="fas fa-eye"></i> View
+  <i className="fas fa-eye"></i>
 </button>
+
+
+      {["superadmin", "admin", "engineer"].includes(emp_data?.emp_role) || r.performed_by === emp_data?.emp_name && !r.senior_tech && (
+    <button
+      className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+      onClick={() => handleRemoveGranite(r.id)}
+    >
+      <i className="fas fa-trash"></i>
+    </button>
+)}
+
 
     </div>
   ),
@@ -264,6 +288,8 @@ const dataWithAction = tableData.data.map((r) => ({
                 <h1 className="text-2xl font-bold">
                     <i className="fa-regular fa-gem"></i> Granite Table
                 </h1>
+{!["superadmin", "admin"].includes(emp_data?.emp_role) && (
+  <div>
 
                 <button
                     className="text-white bg-emerald-500 btn hover:bg-emerald-700"
@@ -271,6 +297,8 @@ const dataWithAction = tableData.data.map((r) => ({
                 >
                     <i className="fa-solid fa-plus"></i> New Granite
                 </button>
+</div>
+)}
             </div>
 
             <DataTable
@@ -729,15 +757,21 @@ const dataWithAction = tableData.data.map((r) => ({
             </span>
           </span>
 
-          {["pmtech", "toolcrib", "seniortech", "tooling"].includes(emp_data?.emp_role) &&
-           !selectedReport.senior_tech && (
-            <button
-              className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
-              onClick={() => handleVerify("senior_tech")}
-            >
-              <i className="fas fa-check"></i> Verify
-            </button>
-          )}
+          {["pmtech", "toolcrib", "seniortech", "tooling"].includes(emp_data?.emp_role) && !selectedReport.senior_tech ? (
+  selectedReport.performed_by !== emp_data?.emp_name ? (
+    <button
+      className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+      onClick={() => handleVerify("senior_tech")}
+    >
+      <i className="fas fa-check"></i> Verify
+    </button>
+  ) : (
+    <span className="ml-2 px-2 py-1 bg-red-100 text-red-600 border-1 border-red-500 text-xs rounded">
+      Cannot verify own checklist
+    </span>
+  )
+) : null}
+
         </td>
       </tr>
 
@@ -758,7 +792,7 @@ const dataWithAction = tableData.data.map((r) => ({
            selectedReport.senior_tech &&
            !selectedReport.qa_sign && (
             <button
-              className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+              className="ml-2 px-2 py-1 bg-emerald-500 border-1 border-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
               onClick={() => handleVerify("qa_sign")}
             >
               <i className="fas fa-check"></i> Verify

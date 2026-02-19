@@ -29,7 +29,8 @@ class AdminController extends Controller
             [
                 'conditions' => function ($query) {
                     return $query
-                        ->whereNotIn('emp_role', ['toolcrib', 'approver', 'superadmin']);
+                        ->whereNotIn('emp_role', ['toolcrib', 'approver', 'superadmin'])
+                        ->OrderBy('emp_role', 'ASC');
                 },
 
 

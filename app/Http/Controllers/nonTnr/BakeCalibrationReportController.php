@@ -51,8 +51,16 @@ class BakeCalibrationReportController extends Controller
             ->table('machine_list')
             ->select('machine_num', 'cn_no', 'serial', 'machine_platform')
             ->whereNotNull('machine_num')
+            ->whereNotNull('cn_no')
             ->where('machine_num', '!=', '')
             ->where('machine_num', '!=', 'N/A')
+            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+            ->whereIn('pmnt_no', function ($query) {
+                $query->select('pmnt_no')
+                    ->from('machine_list')
+                    ->groupBy('pmnt_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })
             ->distinct()
             ->orderBy('machine_platform', 'asc')
             ->get();

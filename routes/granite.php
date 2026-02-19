@@ -16,7 +16,7 @@ Route::prefix($app_name)->middleware(AuthMiddleware::class)->group(function () {
   Route::get("/granite-index", [GraniteController::class, 'index'])->name('non-tnr.granite');
   Route::post("/granite-save", [GraniteController::class, 'store'])->name('store.granite');
   Route::post("/granite-verify/{id}", [GraniteController::class, 'verify'])->name('verify.granite');
+  Route::delete("/granite-delete/{id}", [GraniteController::class, 'delete'])->name('granite.delete');
 
-  Route::get('/granite/{id}/pdf', [GraniteController::class, 'pdf'])
-    ->name('granite.pdf');
+  Route::get('/granite/{id}/pdf', [GraniteController::class, 'pdf'])->name('granite.pdf');
 });

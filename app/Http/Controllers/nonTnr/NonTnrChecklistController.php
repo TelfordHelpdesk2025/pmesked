@@ -68,7 +68,14 @@ class NonTnrChecklistController extends Controller
             ]),
             'templates' => NonTnrChecklistItem::orderByDesc('id')->get(),
             'machines' => Machine::whereNotNull('pmnt_no')
-                ->where('machine_type', 'NON T&R')
+                ->whereIn('machine_type', ['NON T&R', 'NON TNR', 'Microscope'])
+                ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+                ->whereIn('pmnt_no', function ($query) {
+                    $query->select('pmnt_no')
+                        ->from('machine_list')
+                        ->groupBy('pmnt_no')
+                        ->havingRaw('COUNT(*) = 1');
+                })
                 ->distinct()
                 ->get(),
             'empData' => [

@@ -209,39 +209,42 @@ const [editModal, setEditModal] = useState(false);
 const [editData, setEditData] = useState(null);
 
 // Action buttons kasama ang Edit
-const dataWithAction = tableData.data.map((r) => ({
-  ...r,
-  action: (
-    <div className="flex gap-2">
-      {/* View Button */}
-      <button
-        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        onClick={() => {
-          setSelectedReport(r);
-          setViewModal(true);
-        }}
-      >
-        <i className="fas fa-eye"></i> View
-      </button>
+const dataWithAction = tableData.data.map((item) => {
+  const [dueYear, dueMonth, dueDay] = item.date_performed.split("-");
+  const [checkYear, checkMonth, checkDay] = item.due_date.split("-");
 
-      
-      {/* Conditional edit Button */}
-      {/* {(r.performed_by === emp_data?.emp_name || ['1788'].includes(emp_data?.emp_id)) && ( */}
-      {(['1788'].includes(emp_data?.emp_id)) && (
-  <button
-    className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-    onClick={() => {
-      setEditData(r);
-      setEditModal(true);
-    }}
-  >
-    <i className="fas fa-pen"></i> Edit
-  </button>
-)}
+  return {
+    ...item,
+    date_performed: `${dueMonth}/${dueDay}/${dueYear}`,
+    due_date: `${checkMonth}/${checkDay}/${checkYear}`,
+    action: (
+      <div className="flex gap-2">
+        <button
+          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          onClick={() => {
+            setSelectedReport(item); // ← dito dapat item
+            setViewModal(true);
+          }}
+        >
+          <i className="fas fa-eye"></i> View
+        </button>
 
-    </div>
-  ),
-}));
+        {(['1788'].includes(emp_data?.emp_id)) && (
+          <button
+            className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            onClick={() => {
+              setEditData(item); // ← dito dapat item
+              setEditModal(true);
+            }}
+          >
+            <i className="fas fa-pen"></i> Edit
+          </button>
+        )}
+      </div>
+    ),
+  };
+});
+
 
 // const Creators = emp_data?.emp_name === selectedReport?.performed_by;
 
@@ -465,7 +468,7 @@ const dataWithAction = tableData.data.map((r) => ({
         </button>
       </div>
 <div className="flex justify-end items-center mb-3 border-b pb-2">
- {emp_data?.emp_name === selectedReport.performed_by && (
+ {/* {emp_data?.emp_name === selectedReport.performed_by && ( */}
       <a
   href={`/bake-calibration/pdf/${selectedReport.id}`}
   target="_blank"
@@ -474,7 +477,7 @@ const dataWithAction = tableData.data.map((r) => ({
   <i className="fa-solid fa-file-pdf mr-2"></i>
   View as PDF
 </a>
-  )}
+  {/* )} */}
 </div>
 
       <div className="space-y-4">

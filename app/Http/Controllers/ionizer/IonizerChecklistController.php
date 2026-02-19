@@ -34,12 +34,21 @@ class IonizerChecklistController extends Controller
         $items = IonizerChecklistItem::orderBy('id', 'desc')->get();
 
         // Machines list
-        $machines = DB::connection('server25')->table('machine_list')->select('*')
+        $machines = DB::connection('server25')
+            ->table('machine_list')
             ->whereNotNull('pmnt_no')
+            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
             ->whereIn('machine_type', ['IONIZER', 'Air Ionizer'])
+            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+            ->whereIn('pmnt_no', function ($query) {
+                $query->select('pmnt_no')
+                    ->from('machine_list')
+                    ->groupBy('pmnt_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })
             ->orderBy('machine_type')
-            ->distinct()
             ->get();
+
 
         // Decode JSON fields safely
         $reports->getCollection()->transform(function ($report) {
