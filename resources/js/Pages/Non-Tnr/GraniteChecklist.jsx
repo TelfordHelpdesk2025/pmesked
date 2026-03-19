@@ -7,884 +7,878 @@ import axios from "axios";
 
 
 export default function GraniteChecklist({ tableData, tableFilters, emp_data, machines }) {
-    const [showModal, setShowModal] = useState(false);
-    const [viewModal, setViewModal] = useState(false);
-    const [selectedReport, setSelectedReport] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [viewModal, setViewModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
 
-    const { Option } = Select;
+  const { Option } = Select;
 
 
-    // Header form state
-    // Helper function para i-format ang date sa MM/DD/YYYY
-const formatDateMMDDYYYY = (date) => {
+  // Header form state
+  // Helper function para i-format ang date sa MM/DD/YYYY
+  const formatDateMMDDYYYY = (date) => {
     const mm = String(date.getMonth() + 1).padStart(2, '0'); // month starts from 0
     const dd = String(date.getDate()).padStart(2, '0');
     const yyyy = date.getFullYear();
     return `${mm}/${dd}/${yyyy}`;
-};
+  };
 
-// Current date
-const today = new Date();
-const formattedToday = formatDateMMDDYYYY(today);
+  // Current date
+  const today = new Date();
+  const formattedToday = formatDateMMDDYYYY(today);
 
-// 1 year from now
-const nextYear = new Date();
-nextYear.setFullYear(today.getFullYear() + 1);
-const formattedNextYear = formatDateMMDDYYYY(nextYear);
+  // 1 year from now
+  const nextYear = new Date();
+  nextYear.setFullYear(today.getFullYear() + 1);
+  const formattedNextYear = formatDateMMDDYYYY(nextYear);
 
- const handleMachineChange = (e) => {
-  const selected = e.target.value;
-  const machine = machines.find((m) => m.machine_num === selected);
-  if (!machine) {
-    // If user typed random value → do not autofill
+  const handleMachineChange = (e) => {
+    const selected = e.target.value;
+    const machine = machines.find((m) => m.machine_num === selected);
+    if (!machine) {
+      // If user typed random value → do not autofill
+      setData((prev) => ({
+        ...prev,
+        equipment: selected,
+      }));
+      return;
+    }
+
     setData((prev) => ({
       ...prev,
       equipment: selected,
+      control_no: machine?.pmnt_no ?? machine?.control_no ?? "",
+      serial: machine?.serial ?? machine?.serial_no ?? "",
+      performed_by: emp_data?.emp_name || "",
+      date_performed: formattedToday,  // current date MM/DD/YYYY
+      due_date: formattedNextYear,     // 1 year from now MM/DD/YYYY
     }));
-    return;
-  }
+  };
 
-  setData((prev) => ({
-    ...prev,
-    equipment: selected,
-    control_no: machine?.pmnt_no ?? machine?.control_no ?? "",
-    serial: machine?.serial ?? machine?.serial_no ?? "",
-    performed_by: emp_data?.emp_name || "",
-    date_performed: formattedToday,  // current date MM/DD/YYYY
-    due_date: formattedNextYear,     // 1 year from now MM/DD/YYYY
-  }));
-};
-
-const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     equipment: "",
     control_no: "",
     serial_no: "",
     performed_by: emp_data?.emp_name || "",
     date_performed: formattedToday,  // current date MM/DD/YYYY
     due_date: formattedNextYear,     // 1 year from now MM/DD/YYYY
-});
+  });
 
 
-    // Checklist table state
-    const [checklist, setChecklist] = useState([
-        { no: 1, item: "Top table", req: "Clean / No Dirt / No scratch", activity: "A, B", actual: "", freq: "A", remarks: "" },
-        { no: 2, item: "Loose Screw", req: "No loose screw", activity: "D", actual: "", freq: "A", remarks: "" },
-        { no: 3, item: "Rotation of Plate", req: "Rotate at 180 Degree", activity: "E", actual: "", freq: "A", remarks: "" },
-        { no: 4, item: "Table Footings", req: "Fix / Stable", activity: "A, B, E, H", actual: "", freq: "A", remarks: "" },
-    ]);
+  // Checklist table state
+  const [checklist, setChecklist] = useState([
+    { no: 1, item: "Top table", req: "Clean / No Dirt / No scratch", activity: "A, B", actual: "", freq: "A", remarks: "" },
+    { no: 2, item: "Loose Screw", req: "No loose screw", activity: "D", actual: "", freq: "A", remarks: "" },
+    { no: 3, item: "Rotation of Plate", req: "Rotate at 180 Degree", activity: "E", actual: "", freq: "A", remarks: "" },
+    { no: 4, item: "Table Footings", req: "Fix / Stable", activity: "A, B, E, H", actual: "", freq: "A", remarks: "" },
+  ]);
 
-    // Flatness table state
-    const [flatness, setFlatness] = useState([
-        { no: 1, point: "POINT 1", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
-        { no: 2, point: "POINT 2", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
-        { no: 3, point: "POINT 3", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
-        { no: 4, point: "POINT 4", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
-        { no: 5, point: "MAX-MIN", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
-    ]);
+  // Flatness table state
+  const [flatness, setFlatness] = useState([
+    { no: 1, point: "POINT 1", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
+    { no: 2, point: "POINT 2", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
+    { no: 3, point: "POINT 3", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
+    { no: 4, point: "POINT 4", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
+    { no: 5, point: "MAX-MIN", required: "0.0 ±0.005mm", actual: "", result: "", remarks: "" },
+  ]);
 
-    // Close modal on ESC
-    useEffect(() => {
-        const handleEsc = (e) => {
-            if (e.key === "Escape") setShowModal(false);
-        };
-        window.addEventListener("keydown", handleEsc);
-        return () => window.removeEventListener("keydown", handleEsc);
-    }, []);
-
-    // Header input handler
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+  // Close modal on ESC
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setShowModal(false);
     };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
 
-    // Checklist cell handler
-    const handleChecklistChange = (index, field, value) => {
-        const updated = [...checklist];
-        updated[index][field] = value;
-        setChecklist(updated);
-    };
+  // Header input handler
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
 
-    // Flatness cell handler
-    const handleFlatnessChange = (index, field, value) => {
-        const updated = [...flatness];
-        updated[index][field] = value;
+  // Checklist cell handler
+  const handleChecklistChange = (index, field, value) => {
+    const updated = [...checklist];
+    updated[index][field] = value;
+    setChecklist(updated);
+  };
 
-        // Optionally calculate Pass/Fail based on required vs actual
-        if (field === "actual") {
-            const required = parseFloat(updated[index].required.split(" ")[0]);
-            const actualVal = parseFloat(value) || 0;
-            updated[index].result = Math.abs(actualVal - required) <= 0.005 ? "Pass" : "Fail";
-        }
+  // Flatness cell handler
+  const handleFlatnessChange = (index, field, value) => {
+    const updated = [...flatness];
+    updated[index][field] = value;
 
-        setFlatness(updated);
-    };
+    // Optionally calculate Pass/Fail based on required vs actual
+    if (field === "actual") {
+      const required = parseFloat(updated[index].required.split(" ")[0]);
+      const actualVal = parseFloat(value) || 0;
+      updated[index].result = Math.abs(actualVal - required) <= 0.005 ? "Pass" : "Fail";
+    }
 
-    // Save function
-const handleSave = (e) => {
+    setFlatness(updated);
+  };
+
+  // Save function
+  const handleSave = (e) => {
     e.preventDefault();
 
     // Required: equipment field check
     if (!formData.equipment) {
-        alert("Equipment field is required");
-        return;
+      alert("Equipment field is required");
+      return;
     }
 
     // Prepare payload
     const payload = {
-        ...formData,
-        procedure_specs: JSON.stringify(checklist),
-        flatness_inspection: JSON.stringify(flatness),
+      ...formData,
+      procedure_specs: JSON.stringify(checklist),
+      flatness_inspection: JSON.stringify(flatness),
     };
 
     // Submit using Inertia router.post
     router.post(route("store.granite"), payload, {
-        onSuccess: () => {
-            setShowModal(false);
-            alert("✅ Granite checklist saved successfully!");
+      onSuccess: () => {
+        setShowModal(false);
+        alert("✅ Granite checklist saved successfully!");
 
-            // Reset header form
-            setFormData({
-                equipment: "",
-                control_no: "",
-                serial_no: "",
-                performed_by: "",
-                date_performed: "",
-                due_date: "",
-            });
+        // Reset header form
+        setFormData({
+          equipment: "",
+          control_no: "",
+          serial_no: "",
+          performed_by: "",
+          date_performed: "",
+          due_date: "",
+        });
 
-            // Reset checklist and flatness tables
-            setChecklist(checklist.map(item => ({ ...item, actual: "", remarks: "" })));
-            setFlatness(flatness.map(item => ({ ...item, actual: "", result: "", remarks: "" })));
-        },
-        onError: (errors) => {
-            console.error("Validation or server error:", errors);
-            alert("❌ Error saving checklist. Check console for details.");
-        },
+        // Reset checklist and flatness tables
+        setChecklist(checklist.map(item => ({ ...item, actual: "", remarks: "" })));
+        setFlatness(flatness.map(item => ({ ...item, actual: "", result: "", remarks: "" })));
+      },
+      onError: (errors) => {
+        console.error("Validation or server error:", errors);
+        alert("❌ Error saving checklist. Check console for details.");
+      },
     });
-};
+  };
 
 
 
-const handleVerify = async (field) => {
-  if (!selectedReport) return;
+  const handleVerify = async (field) => {
+    if (!selectedReport) return;
 
-  try {
-    // Call backend to save verification
-    const response = await axios.post(route("verify.granite", selectedReport.id), {
-      field,                // "senior_tech", "qa_sign", or "second_eye_verifier"
-      verified_by: emp_data?.emp_name,
-      role: emp_data?.emp_role,
-    });
+    try {
+      // Call backend to save verification
+      const response = await axios.post(route("verify.granite", selectedReport.id), {
+        field,                // "senior_tech", "qa_sign", or "second_eye_verifier"
+        verified_by: emp_data?.emp_name,
+        role: emp_data?.emp_role,
+      });
 
-    // Update local state immediately for UI
-    setSelectedReport(prev => ({
-      ...prev,
-      [field]: emp_data?.emp_name,
-      [`${field}_role`]: emp_data?.emp_role,
-      [`${field}_verified_at`]: new Date().toISOString(),
-    }));
+      // Update local state immediately for UI
+      setSelectedReport(prev => ({
+        ...prev,
+        [field]: emp_data?.emp_name,
+        [`${field}_role`]: emp_data?.emp_role,
+        [`${field}_verified_at`]: new Date().toISOString(),
+      }));
 
-    // Show success alert with icon
-    alert("✅ " + (response.data?.message || "Verified successfully!"));
+      // Show success alert with icon
+      alert("✅ " + (response.data?.message || "Verified successfully!"));
 
-    // Reload table data
-    window.location.reload();
+      // Reload table data
+      window.location.reload();
 
-  } catch (error) {
-    console.error("Verification failed:", error);
+    } catch (error) {
+      console.error("Verification failed:", error);
 
-    // Extract message from backend if available
-    const msg =
-      error.response?.data?.message ||
-      "Failed to verify. Please try again.";
+      // Extract message from backend if available
+      const msg =
+        error.response?.data?.message ||
+        "Failed to verify. Please try again.";
 
-    // Show error alert with icon
-    alert("❌ " + msg);
-  }
-};
+      // Show error alert with icon
+      alert("❌ " + msg);
+    }
+  };
 
-const handleRemoveGranite = (id) => {
-  if (!confirm("Are you sure you want to remove this Item?")) return;
+  const handleRemoveGranite = (id) => {
+    if (!confirm("Are you sure you want to remove this Item?")) return;
 
-  // Pag-delete sa front-end
-router.delete(route("granite.delete", id), {
-    onSuccess: () => {
+    // Pag-delete sa front-end
+    router.delete(route("granite.delete", id), {
+      onSuccess: () => {
         alert("✅ Granite checklist removed successfully!");
         window.location.reload();
-    },
-    onError: () => {
+      },
+      onError: () => {
         alert("❌ Failed to remove granite!");
-    },
-});
-};
+      },
+    });
+  };
 
 
-// Action buttons kasama ang Edit
-const dataWithAction = tableData.data.map((r) => ({
-  ...r,
+  // Action buttons kasama ang Edit
+  const dataWithAction = tableData.data.map((r) => ({
+    ...r,
 
-  senior_tech: (
-    <span
-      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-        r.senior_tech ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
-      }`}
-    >
-      {r.senior_tech || "Pending..."}
-    </span>
-  ),
-  qa_sign: (
-    <span
-      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-        r.qa_sign ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
-      }`}
-    >
-      {r.qa_sign || "Pending..."}
-    </span>
-  ),
-  second_eye_verifier: (
-    <span
-      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-        r.second_eye_verifier ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
-      }`}
-    >
-      {r.second_eye_verifier || "Pending..."}
-    </span>
-  ),
-  action: (
-    <div className="flex gap-2">
-      {/* View Button */}
-      <button
-  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-  onClick={() => {
-    setSelectedReport(r);
-    setViewModal(true);
-  }}
->
-  <i className="fas fa-eye"></i>
-</button>
+    senior_tech: (
+      <span
+        className={`px-2 py-1 rounded-lg text-xs font-semibold ${r.senior_tech ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+          }`}
+      >
+        {r.senior_tech || "Pending..."}
+      </span>
+    ),
+    qa_sign: (
+      <span
+        className={`px-2 py-1 rounded-lg text-xs font-semibold ${r.qa_sign ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+          }`}
+      >
+        {r.qa_sign || "Pending..."}
+      </span>
+    ),
+    second_eye_verifier: (
+      <span
+        className={`px-2 py-1 rounded-lg text-xs font-semibold ${r.second_eye_verifier ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+          }`}
+      >
+        {r.second_eye_verifier || "Pending..."}
+      </span>
+    ),
+    action: (
+      <div className="flex gap-2">
+        {/* View Button */}
+        <button
+          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          onClick={() => {
+            setSelectedReport(r);
+            setViewModal(true);
+          }}
+        >
+          <i className="fas fa-eye"></i>
+        </button>
 
 
-      {["superadmin", "admin", "engineer"].includes(emp_data?.emp_role) || r.performed_by === emp_data?.emp_name && !r.senior_tech && (
-    <button
-      className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-      onClick={() => handleRemoveGranite(r.id)}
-    >
-      <i className="fas fa-trash"></i>
-    </button>
-)}
+        {["superadmin", "admin", "engineer"].includes(emp_data?.emp_role) || r.performed_by === emp_data?.emp_name && !r.senior_tech && (
+          <button
+            className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            onClick={() => handleRemoveGranite(r.id)}
+          >
+            <i className="fas fa-trash"></i>
+          </button>
+        )}
 
 
-    </div>
-  ),
-}));
+      </div>
+    ),
+  }));
 
 
 
-    return (
-        <AuthenticatedLayout>
-            <Head title="Granite Checklist" />
+  return (
+    <AuthenticatedLayout>
+      <Head title="Granite Checklist" />
 
-            <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-bold">
-                    <i className="fa-regular fa-gem"></i> Granite Table
-                </h1>
-{!["superadmin", "admin"].includes(emp_data?.emp_role) && (
-  <div>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">
+          <i className="fa-regular fa-gem"></i> Granite Table
+        </h1>
+        {!["superadmin", "admin"].includes(emp_data?.emp_role) && (
+          <div>
 
-                <button
-                    className="text-white bg-emerald-500 btn hover:bg-emerald-700"
-                    onClick={() => setShowModal(true)}
-                >
-                    <i className="fa-solid fa-plus"></i> New Granite
-                </button>
-</div>
-)}
+            <button
+              className="text-white bg-emerald-500 btn hover:bg-emerald-700"
+              onClick={() => setShowModal(true)}
+            >
+              <i className="fa-solid fa-plus"></i> New Granite
+            </button>
+          </div>
+        )}
+      </div>
+
+      <DataTable
+        columns={[
+          { key: "equipment", label: "Equipment" },
+          { key: "control_no", label: "Control No." },
+          { key: "serial_no", label: "Serial No" },
+          { key: "performed_by", label: "Performed By" },
+          { key: "date_performed", label: "Date Performed" },
+          { key: "due_date", label: "Due Date" },
+          { key: "senior_tech", label: "Technician" },
+          { key: "qa_sign", label: "QA" },
+          { key: "second_eye_verifier", label: "Second Eye Verifier" },
+          { key: "action", label: "Action" },
+        ]}
+        data={dataWithAction}
+        meta={{
+          from: tableData.from,
+          to: tableData.to,
+          total: tableData.total,
+          links: tableData.links,
+          currentPage: tableData.current_page,
+          lastPage: tableData.last_page,
+        }}
+        routeName={route("non-tnr.granite")}
+        filters={tableFilters}
+        rowKey="id"
+        showExport={false}
+      />
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowModal(false)}
+          />
+
+          <div className="relative bg-white w-[60vw] h-[95vh] rounded-none shadow-xl flex flex-col">
+            {/* Header */}
+            <div className="flex justify-end items-center p-4 border-b">
+              <button
+                className="text-red-500 hover:text-red-700 font-bold"
+                onClick={() => setShowModal(false)}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
             </div>
 
-            <DataTable
-                columns={[
-                    { key: "equipment", label: "Equipment" },
-                    { key: "control_no", label: "Control No." },
-                    { key: "serial_no", label: "Serial No" },
-                    { key: "performed_by", label: "Performed By" },
-                    { key: "date_performed", label: "Date Performed" },
-                    { key: "due_date", label: "Due Date" },
-                    { key: "senior_tech", label: "Technician" },
-                    { key: "qa_sign", label: "QA" },
-                    { key: "second_eye_verifier", label: "Second Eye Verifier" },
-                    { key: "action", label: "Action"},
-                ]}
-                data={dataWithAction}
-                meta={{
-                    from: tableData.from,
-                    to: tableData.to,
-                    total: tableData.total,
-                    links: tableData.links,
-                    currentPage: tableData.current_page,
-                    lastPage: tableData.last_page,
-                }}
-                routeName={route("non-tnr.granite")}
-                filters={tableFilters}
-                rowKey="id"
-                showExport={false}
-            />
-
-            {/* Modal */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div
-                        className="absolute inset-0 bg-black/50"
-                        onClick={() => setShowModal(false)}
-                    />
-
-                    <div className="relative bg-white w-[60vw] h-[95vh] rounded-none shadow-xl flex flex-col">
-                        {/* Header */}
-                        <div className="flex justify-end items-center p-4 border-b">
-                            <button
-                                className="text-red-500 hover:text-red-700 font-bold"
-                                onClick={() => setShowModal(false)}
-                            >
-                                <i className="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-
-                        {/* Body */}
-                        <div className="flex-1 overflow-y-auto p-4">
-                            <div className="p-6 text-black text-sm font-sans">
-                                {/* Title */}
-                                <div className="text-center mb-4">
-                                    <h1 className="text-3xl font-bold text-orange-700">GRANITE TABLE</h1>
-                                    <h2 className="text-lg">PREVENTIVE MAINTENANCE CHECKLIST</h2>
-                                </div>
-
-                                {/* Header Inputs */}
-                                {/* Header Inputs */}
-<table className="w-half border border-black mb-4">
-  <tbody>
-    {/* MACHINE NUMBER with AntD Select */}
-    <tr>
-      <td className="border border-black px-2 py-1 font-semibold w-1/3">
-        MACHINE NUMBER:
-      </td>
-      <td className="border border-black px-2 py-1">
-        <Select
-          showSearch
-          placeholder="Select or type machine..."
-          optionFilterProp="children"
-          value={formData.equipment || undefined}
-          onChange={(value) => {
-            const machine = machines.find((m) => m.machine_num === value);
-            if (!machine) {
-              setFormData((prev) => ({
-                ...prev,
-                equipment: value,
-              }));
-              return;
-            }
-            setFormData((prev) => ({
-              ...prev,
-              equipment: value,
-              control_no: machine?.pmnt_no ?? machine?.control_no ?? "",
-              serial_no: machine?.serial ?? machine?.serial_no ?? "",
-              performed_by: emp_data?.emp_name || "",
-              date_performed: formattedToday,
-              due_date: formattedNextYear,
-            }));
-          }}
-          filterOption={(input, option) =>
-            option.children.toLowerCase().includes(input.toLowerCase())
-          }
-          style={{ width: "100%" }}
-        >
-          {machines.map((m, i) => (
-            <Select.Option key={i} value={m.machine_num}>
-              {m.machine_num}
-            </Select.Option>
-          ))}
-        </Select>
-      </td>
-    </tr>
-
-    {/* Other header fields */}
-    {[
-      { label: "CONTROL NUMBER", name: "control_no" },
-      { label: "SERIAL NUMBER", name: "serial_no" },
-      { label: "PERFORMED BY", name: "performed_by" },
-      { label: "DATE PERFORMED", name: "date_performed" },
-      { label: "DUE DATE", name: "due_date" },
-    ].map((field, i) => (
-      <tr key={i}>
-        <td className="border border-black px-2 py-1 font-semibold w-1/3">
-          {field.label} :
-        </td>
-        <td className="border border-black px-2 py-1">
-          <input
-            type="text"
-            name={field.name}
-            value={formData[field.name]}
-            onChange={handleChange}
-            className="w-full border px-1 py-1 border-gray-400 rounded-md"
-            readOnly={["performed_by", "date_performed", "due_date"].includes(field.name)}
-          />
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-
-
-                                <p className="font-semibold mb-2">REFERENCE PM PROCEDURE SPECIFICATION : TFP05-001</p>
-
-                                {/* Checklist Table */}
-                                <table className="w-full border border-black mb-4">
-                                    <thead>
-                                        <tr className="font-semibold text-center">
-                                            <th className="border border-black">NO.</th>
-                                            <th className="border border-black">ASSEMBLY ITEM</th>
-                                            <th className="border border-black">REQUIREMENTS</th>
-                                            <th className="border border-black">ACTIVITY</th>
-                                            <th className="border border-black">ACTUAL</th>
-                                            <th className="border border-black">FREQ</th>
-                                            <th className="border border-black">REMARKS</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {checklist.map((row, i) => (
-                                            <tr key={i}>
-                                                <td className="border border-black text-center">{row.no}</td>
-                                                <td className="border border-black">{row.item}</td>
-                                                <td className="border border-black">{row.req}</td>
-                                                <td className="border border-black text-center">{row.activity}</td>
-                                                <td className="border border-black px-1">
-                                                    <input
-                                                        type="text"
-                                                        value={row.actual}
-                                                        onChange={(e) => handleChecklistChange(i, "actual", e.target.value)}
-                                                        className="w-full border px-1 py-1 border-gray-400 rounded-md"
-                                                    />
-                                                </td>
-                                                <td className="border border-black text-center px-1">
-                                                   {row.freq}
-                                                </td>
-                                                <td className="border border-black px-1">
-                                                    <input
-                                                        type="text"
-                                                        value={row.remarks}
-                                                        onChange={(e) => handleChecklistChange(i, "remarks", e.target.value)}
-                                                        className="w-full border px-1 py-1 border-gray-400 rounded-md"
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-
-                                {/* Flatness Table */}
-                                <h3 className="text-center font-bold mb-2">FLATNESS INSPECTION DETAILS</h3>
-                                <table className="w-full border border-black mb-4">
-                                    <thead>
-                                        <tr className="font-semibold text-center">
-                                            <th className="border border-black">NO.</th>
-                                            <th className="border border-black">FLATNESS CHECK (Granite Grade B)</th>
-                                            <th className="border border-black">IMAGE REFERENCE</th>
-                                            <th className="border border-black">REQUIRED VALUE</th>
-                                            <th className="border border-black">ACTUAL</th>
-                                            <th className="border border-black">RESULT (Pass / Fail)</th>
-                                            <th className="border border-black">REMARKS</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {flatness.map((row, i) => (
-                                            <tr key={i}>
-                                                <td className="border border-black text-center">{row.no}</td>
-                                                <td className="border border-black">{row.point}</td>
-                                                {i === 0 && (
-                                                    <td className="border border-black text-center align-middle" rowSpan={5}>
-                                                        <img src="/images/granite_image.png" alt="Granite Flatness Reference" className="mx-auto h-28 object-contain"/>
-                                                    </td>
-                                                )}
-                                                <td className="border border-black text-center">{row.required}</td>
-                                                <td className="border border-black px-1">
-                                                    <input
-                                                        type="text"
-                                                        value={row.actual}
-                                                        onChange={(e) => handleFlatnessChange(i, "actual", e.target.value)}
-                                                        className="w-full border px-1 py-1 border-gray-400 rounded-md"
-                                                    />
-                                                </td>
-                                                <td className="border border-black text-center px-1">
-                                                    <input
-                                                        type="text"
-                                                        value={row.result}
-                                                        onChange={(e) => handleFlatnessChange(i, "result", e.target.value)}
-                                                        className="w-full border px-1 py-1 text-center border-gray-400 rounded-md"
-                                                    />
-                                                </td>
-                                                <td className="border border-black px-1">
-                                                    <input
-                                                        type="text"
-                                                        value={row.remarks}
-                                                        onChange={(e) => handleFlatnessChange(i, "remarks", e.target.value)}
-                                                        className="w-full border px-1 py-1 border-gray-400 rounded-md"
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-
-                                {/* Legend */}
-                                <div className="text-xs">
-                                    <p><strong>LEGEND:</strong> M = Monthly; Q = Quarterly; S = Semi-Annually; A = Annually</p>
-                                    <p><strong>ACTIVITY CODE:</strong> A-Check; B-Clean; C-Lubricate; D-Adjust; E-Align; F-Calibrate; G-Modify; H-Repair; I-Replace; J-Refill; K-Drain; L-Measure; M-Scan/Disk Defragment; N-Change Oil; NA-Not Applicable</p>
-                                    <p className="text-right mt-2">TELFORD SVC. PHILS., INC. — Maint-75 (Rev.1)</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex justify-end gap-2 p-4 border-t">
-                            <button
-                                className="text-white bg-red-500 btn hover:bg-red-700"
-                                onClick={() => setShowModal(false)}
-                            >
-                                <i className="fa-solid fa-xmark"></i> Cancel
-                            </button>
-                            <button
-                                className="text-white bg-green-600 btn hover:bg-green-700"
-                                onClick={handleSave}
-                            >
-                                <i className="fa-solid fa-save"></i> Save Checklist
-                            </button>
-                        </div>
-                    </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="p-6 text-black text-sm font-sans">
+                {/* Title */}
+                <div className="text-center mb-4">
+                  <h1 className="text-3xl font-bold text-orange-700">GRANITE TABLE</h1>
+                  <h2 className="text-lg">PREVENTIVE MAINTENANCE CHECKLIST</h2>
                 </div>
-            )}
 
-            {/*** View Modal **/}
-{viewModal && selectedReport && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center">
-    <div
-      className="absolute inset-0 bg-black/50"
-      onClick={() => setViewModal(false)}
-    />
+                {/* Header Inputs */}
+                {/* Header Inputs */}
+                <table className="w-half border border-black mb-4">
+                  <tbody>
+                    {/* MACHINE NUMBER with AntD Select */}
+                    <tr>
+                      <td className="border border-black px-2 py-1 font-semibold w-1/3">
+                        MACHINE NUMBER:
+                      </td>
+                      <td className="border border-black px-2 py-1">
+                        <Select
+                          showSearch
+                          placeholder="Select or type machine..."
+                          optionFilterProp="children"
+                          value={formData.equipment || undefined}
+                          onChange={(value) => {
+                            const machine = machines.find((m) => m.machine_num === value);
+                            if (!machine) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                equipment: value,
+                              }));
+                              return;
+                            }
+                            setFormData((prev) => ({
+                              ...prev,
+                              equipment: value,
+                              control_no: machine?.pmnt_no ?? machine?.control_no ?? "",
+                              serial_no: machine?.serial ?? machine?.serial_no ?? "",
+                              performed_by: emp_data?.emp_name || "",
+                              date_performed: formattedToday,
+                              due_date: formattedNextYear,
+                            }));
+                          }}
+                          filterOption={(input, option) =>
+                            option.children.toLowerCase().includes(input.toLowerCase())
+                          }
+                          style={{ width: "100%" }}
+                        >
+                          {machines.map((m, i) => (
+                            <Select.Option key={i} value={m.machine_num}>
+                              {m.machine_num}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </td>
+                    </tr>
 
-    <div className="relative bg-white w-[60vw] h-[95vh] shadow-xl flex flex-col">
-      {/* Header */}
-      <div className="flex justify-end items-center p-4 border-b">
+                    {/* Other header fields */}
+                    {[
+                      { label: "CONTROL NUMBER", name: "control_no" },
+                      { label: "SERIAL NUMBER", name: "serial_no" },
+                      { label: "PERFORMED BY", name: "performed_by" },
+                      { label: "DATE PERFORMED", name: "date_performed" },
+                      { label: "DUE DATE", name: "due_date" },
+                    ].map((field, i) => (
+                      <tr key={i}>
+                        <td className="border border-black px-2 py-1 font-semibold w-1/3">
+                          {field.label} :
+                        </td>
+                        <td className="border border-black px-2 py-1">
+                          <input
+                            type="text"
+                            name={field.name}
+                            value={formData[field.name]}
+                            onChange={handleChange}
+                            className="w-full border px-1 py-1 border-gray-400 rounded-md"
+                            readOnly={["control_no", "serial_no", "performed_by", "date_performed", "due_date"].includes(field.name)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-        
-        
-        <button
-          className="text-red-500 hover:text-red-700 font-bold"
-          onClick={() => setViewModal(false)}
-        >
-          <i className="fa-solid fa-xmark"></i>
-        </button>
-      </div>
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto p-4">
-       <div className="p-6 text-black text-sm font-sans">
-  {/* Title */}
-  <div className="text-center mb-4">
-   <div className="flex justify-end items-center">
-             {selectedReport.second_eye_verifier && (
-    <a
-      href={route("granite.pdf", selectedReport.id)}
-      target="_blank"
-      className="px-3 py-2 bg-gray-100 text-red-600 rounded shadow hover:bg-red-700 hover:text-white border-2 border-red-600 hover:border-gray-500 flex items-center text-bold"
-    >
-      <i className="fa-solid fa-file-pdf"></i>
-      View as PDF
-    </a>
-  )}
-    </div>
-    <h1 className="text-3xl font-bold text-orange-700">
-      GRANITE TABLE
-    </h1>
-    <h2 className="text-lg">
-      PREVENTIVE MAINTENANCE CHECKLIST
-    </h2>
-  </div>
+                <p className="font-semibold mb-2">REFERENCE PM PROCEDURE SPECIFICATION : TFP05-001</p>
 
-  {/* Header */}
-  <table className="w-half border border-black mb-4">
-    <tbody>
-      {[
-        ["MACHINE NUMBER", selectedReport.equipment],
-        ["CONTROL NUMBER", selectedReport.control_no],
-        ["SERIAL NUMBER", selectedReport.serial_no],
-        ["PERFORMED BY", selectedReport.performed_by],
-        ["DATE PERFORMED", selectedReport.date_performed],
-        ["DUE DATE", selectedReport.due_date],
-      ].map(([label, value], i) => (
-        <tr key={i}>
-          <td className="border border-black px-2 py-1 font-semibold w-1/3">
-            {label} :
-          </td>
-          <td className="border border-black px-2 py-1">
-            {value || "\u00A0"}
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+                {/* Checklist Table */}
+                <table className="w-full border border-black mb-4">
+                  <thead>
+                    <tr className="font-semibold text-center">
+                      <th className="border border-black">NO.</th>
+                      <th className="border border-black">ASSEMBLY ITEM</th>
+                      <th className="border border-black">REQUIREMENTS</th>
+                      <th className="border border-black">ACTIVITY</th>
+                      <th className="border border-black">ACTUAL</th>
+                      <th className="border border-black">FREQ</th>
+                      <th className="border border-black">REMARKS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {checklist.map((row, i) => (
+                      <tr key={i}>
+                        <td className="border border-black text-center">{row.no}</td>
+                        <td className="border border-black">{row.item}</td>
+                        <td className="border border-black">{row.req}</td>
+                        <td className="border border-black text-center">{row.activity}</td>
+                        <td className="border border-black px-1">
+                          <input
+                            type="text"
+                            value={row.actual}
+                            onChange={(e) => handleChecklistChange(i, "actual", e.target.value)}
+                            className="w-full border px-1 py-1 border-gray-400 rounded-md"
+                          />
+                        </td>
+                        <td className="border border-black text-center px-1">
+                          {row.freq}
+                        </td>
+                        <td className="border border-black px-1">
+                          <input
+                            type="text"
+                            value={row.remarks}
+                            onChange={(e) => handleChecklistChange(i, "remarks", e.target.value)}
+                            className="w-full border px-1 py-1 border-gray-400 rounded-md"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-  <p className="font-semibold mb-2">
-    REFERENCE PM PROCEDURE SPECIFICATION : TFP05-001
-  </p>
+                {/* Flatness Table */}
+                <h3 className="text-center font-bold mb-2">FLATNESS INSPECTION DETAILS</h3>
+                <table className="w-full border border-black mb-4">
+                  <thead>
+                    <tr className="font-semibold text-center">
+                      <th className="border border-black">NO.</th>
+                      <th className="border border-black">FLATNESS CHECK (Granite Grade B)</th>
+                      <th className="border border-black">IMAGE REFERENCE</th>
+                      <th className="border border-black">REQUIRED VALUE</th>
+                      <th className="border border-black">ACTUAL</th>
+                      <th className="border border-black">RESULT (Pass / Fail)</th>
+                      <th className="border border-black">REMARKS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flatness.map((row, i) => (
+                      <tr key={i}>
+                        <td className="border border-black text-center">{row.no}</td>
+                        <td className="border border-black">{row.point}</td>
+                        {i === 0 && (
+                          <td className="border border-black text-center align-middle" rowSpan={5}>
+                            <img src="/images/granite_image.png" alt="Granite Flatness Reference" className="mx-auto h-28 object-contain" />
+                          </td>
+                        )}
+                        <td className="border border-black text-center">{row.required}</td>
+                        <td className="border border-black px-1">
+                          <input
+                            type="text"
+                            value={row.actual}
+                            onChange={(e) => handleFlatnessChange(i, "actual", e.target.value)}
+                            className="w-full border px-1 py-1 border-gray-400 rounded-md"
+                          />
+                        </td>
+                        <td className="border border-black text-center px-1">
+                          <input
+                            type="text"
+                            value={row.result}
+                            onChange={(e) => handleFlatnessChange(i, "result", e.target.value)}
+                            className="w-full border px-1 py-1 text-center border-gray-400 rounded-md"
+                          />
+                        </td>
+                        <td className="border border-black px-1">
+                          <input
+                            type="text"
+                            value={row.remarks}
+                            onChange={(e) => handleFlatnessChange(i, "remarks", e.target.value)}
+                            className="w-full border px-1 py-1 border-gray-400 rounded-md"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-  {/* Checklist */}
-  <table className="w-full border border-black mb-4">
-    <thead>
-      <tr className="font-semibold text-center">
-        <th className="border border-black">NO.</th>
-        <th className="border border-black">ASSEMBLY ITEM</th>
-        <th className="border border-black">REQUIREMENTS</th>
-        <th className="border border-black">ACTIVITY</th>
-        <th className="border border-black">ACTUAL</th>
-        <th className="border border-black">FREQ</th>
-        <th className="border border-black">REMARKS</th>
-      </tr>
-    </thead>
-    <tbody>
-      {JSON.parse(selectedReport.procedure_specs || "[]").map((row, i) => (
-        <tr key={i}>
-          <td className="border border-black text-center">{i + 1}</td>
-          <td className="border border-black">{row.item}</td>
-          <td className="border border-black">{row.req}</td>
-          <td className="border border-black text-center">{row.activity}</td>
-          <td className="border border-black text-center">{row.actual}</td>
-          <td className="border border-black text-center">{row.freq}</td>
-          <td className="border border-black text-center">{row.remarks}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+                {/* Legend */}
+                <div className="text-xs">
+                  <p><strong>LEGEND:</strong> M = Monthly; Q = Quarterly; S = Semi-Annually; A = Annually</p>
+                  <p><strong>ACTIVITY CODE:</strong> A-Check; B-Clean; C-Lubricate; D-Adjust; E-Align; F-Calibrate; G-Modify; H-Repair; I-Replace; J-Refill; K-Drain; L-Measure; M-Scan/Disk Defragment; N-Change Oil; NA-Not Applicable</p>
+                  <p className="text-right mt-2">TELFORD SVC. PHILS., INC. — Maint-75 (Rev.1)</p>
+                </div>
+              </div>
+            </div>
 
-  {/* Flatness */}
-  <h3 className="text-center font-bold mb-2">
-    FLATNESS INSPECTION DETAILS
-  </h3>
-
-  <table className="w-full border border-black mb-4">
-    <thead>
-      <tr className="font-semibold text-center">
-        <th className="border border-black">NO.</th>
-        <th className="border border-black">
-          FLATNESS CHECK (Granite Grade B)
-        </th>
-        <th className="border border-black">IMAGE REFERENCE</th>
-        <th className="border border-black">REQUIRED VALUE</th>
-        <th className="border border-black">ACTUAL</th>
-        <th className="border border-black">
-          RESULT (Pass / Fail)
-        </th>
-        <th className="border border-black">REMARKS</th>
-      </tr>
-    </thead>
-    <tbody>
-      {JSON.parse(selectedReport.flatness_inspection || "[]")
-        .slice(0, 4)
-        .map((row, i) => (
-          <tr key={i}>
-            <td className="border border-black text-center">{row.no}</td>
-            <td className="border border-black">{row.point}</td>
-
-            {i === 0 && (
-              <td
-                className="border border-black text-center align-middle"
-                rowSpan={5}
+            {/* Footer */}
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button
+                className="text-white bg-red-500 btn hover:bg-red-700"
+                onClick={() => setShowModal(false)}
               >
-                <img
-                  src="/images/granite_image.png"
-                  className="mx-auto h-28 object-contain"
-                />
-              </td>
-            )}
+                <i className="fa-solid fa-xmark"></i> Cancel
+              </button>
+              <button
+                className="text-white bg-green-600 btn hover:bg-green-700"
+                onClick={handleSave}
+              >
+                <i className="fa-solid fa-save"></i> Save Checklist
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            <td className="border border-black text-center">
-              {row.required}
-            </td>
-            <td className="border border-black text-center">{row.actual}mm</td>
-            <td className="border border-black text-center">{row.result}</td>
-            <td className="border border-black text-center">{row.remarks}</td>
-          </tr>
-        ))}
+      {/*** View Modal **/}
+      {viewModal && selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setViewModal(false)}
+          />
 
-      {/* MAX - MIN */}
-      {JSON.parse(selectedReport.flatness_inspection || "[]")
-        .slice(4, 5)
-        .map((row, i) => (
-          <tr key={i}>
-            <td className="border border-black text-center">5</td>
-            <td className="border border-black">
-              FLATNESS (MAX - MIN)
-            </td>
-            <td className="border border-black text-center">
-              {row.required}
-            </td>
-            <td className="border border-black text-center">{row.actual}mm</td>
-            <td className="border border-black text-center">{row.result}</td>
-            <td className="border border-black text-center">{row.remarks}</td>
-          </tr>
-        ))}
-    </tbody>
-  </table>
-
-{/* Verification */}
-<div className="flex justify-end">
-  <table className="w-1/2 mb-4 text-sm">
-    <tbody>
-      <tr>
-        <td
-          className="border-r border-black font-semibold text-center align-middle"
-          rowSpan={3}
-        >
-          VERIFIED BY:
-        </td>
-
-        <td className="border border-black px-3 py-2 flex justify-between items-center">
-          <span>
-            Technician:{" "}
-           <span
-      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-        selectedReport.senior_tech ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
-      }`}
-    >
-              {selectedReport.senior_tech || "Pending..."}
-            </span>
-          </span>
-
-          {["pmtech", "toolcrib", "seniortech", "tooling"].includes(emp_data?.emp_role) && !selectedReport.senior_tech ? (
-  selectedReport.performed_by !== emp_data?.emp_name ? (
-    <button
-      className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
-      onClick={() => handleVerify("senior_tech")}
-    >
-      <i className="fas fa-check"></i> Verify
-    </button>
-  ) : (
-    <span className="ml-2 px-2 py-1 bg-red-100 text-red-600 border-1 border-red-500 text-xs rounded">
-      Cannot verify own checklist
-    </span>
-  )
-) : null}
-
-        </td>
-      </tr>
-
-      <tr>
-        <td className="border border-black px-3 py-2 flex justify-between items-center">
-          <span>
-            QA:{" "}
-              <span
-      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-        selectedReport.qa_sign ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
-      }`}
-    >
-              {selectedReport.qa_sign || "Pending..."}
-            </span>
-          </span>
-
-          {["esd"].includes(emp_data?.emp_role) &&
-           selectedReport.senior_tech &&
-           !selectedReport.qa_sign && (
-            <button
-              className="ml-2 px-2 py-1 bg-emerald-500 border-1 border-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
-              onClick={() => handleVerify("qa_sign")}
-            >
-              <i className="fas fa-check"></i> Verify
-            </button>
-          )}
-        </td>
-      </tr>
-
-      <tr>
-        <td className="border border-black px-3 py-2 flex justify-between items-center">
-          <span>
-            Second Eye Verifier:{" "}
-              <span
-      className={`px-2 py-1 rounded-lg text-xs font-semibold ${
-        selectedReport.second_eye_verifier ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
-      }`}
-    >
-              {selectedReport.second_eye_verifier || "Pending..."}
-            </span>
-          </span>
-
-          {["engineer"].includes(emp_data?.emp_role) &&
-           selectedReport.senior_tech &&
-           selectedReport.qa_sign &&
-           !selectedReport.second_eye_verifier && (
-            <button
-              className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
-              onClick={() => handleVerify("second_eye_verifier")}
-            >
-              <i className="fas fa-check"></i> Verify
-            </button>
-          )}
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+          <div className="relative bg-white w-[60vw] h-[95vh] shadow-xl flex flex-col">
+            {/* Header */}
+            <div className="flex justify-end items-center p-4 border-b">
 
 
 
- {/* Legend */}
-<table className="w-full border border-black text-xs">
-  <tbody>
-    <tr>
-      <td className="border border-black font-semibold w-1/5 px-2 py-1">
-        LEGEND
-      </td>
-      <td className="border border-black px-2 py-1">
-        M = Monthly; Q = Quarterly; S = Semi-Annually; A = Annually
-      </td>
-    </tr>
+              <button
+                className="text-red-500 hover:text-red-700 font-bold"
+                onClick={() => setViewModal(false)}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
 
-    <tr>
-      <td className="border border-black font-semibold px-2 py-1">
-        ACTIVITY CODE
-      </td>
-      <td className="border border-black px-2 py-1">
-        A-Check; B-Clean; C-Lubricate; D-Adjust; E-Align; F-Calibrate;
-        G-Modify; H-Repair; I-Replace; J-Refill; K-Drain; L-Measure;
-        M-Scan/Disk Defragment; N-Change Oil; NA-Not Applicable
-      </td>
-    </tr>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="p-6 text-black text-sm font-sans">
+                {/* Title */}
+                <div className="text-center mb-4">
+                  <div className="flex justify-end items-center">
+                    {selectedReport.second_eye_verifier && (
+                      <a
+                        href={route("granite.pdf", selectedReport.id)}
+                        target="_blank"
+                        className="px-3 py-2 bg-gray-100 text-red-600 rounded shadow hover:bg-red-700 hover:text-white border-2 border-red-600 hover:border-gray-500 flex items-center text-bold"
+                      >
+                        <i className="fa-solid fa-file-pdf"></i>
+                        View as PDF
+                      </a>
+                    )}
+                  </div>
+                  <h1 className="text-3xl font-bold text-orange-700">
+                    GRANITE TABLE
+                  </h1>
+                  <h2 className="text-lg">
+                    PREVENTIVE MAINTENANCE CHECKLIST
+                  </h2>
+                </div>
 
-    <tr>
-      <td
-        className="border border-black px-2 py-1 text-right font-semibold"
-        colSpan={2}
-      >
-        TELFORD SVC. PHILS., INC. — Maint-75 (Rev.1)
-      </td>
-    </tr>
-  </tbody>
-</table>
+                {/* Header */}
+                <table className="w-half border border-black mb-4">
+                  <tbody>
+                    {[
+                      ["MACHINE NUMBER", selectedReport.equipment],
+                      ["CONTROL NUMBER", selectedReport.control_no],
+                      ["SERIAL NUMBER", selectedReport.serial_no],
+                      ["PERFORMED BY", selectedReport.performed_by],
+                      ["DATE PERFORMED", selectedReport.date_performed],
+                      ["DUE DATE", selectedReport.due_date],
+                    ].map(([label, value], i) => (
+                      <tr key={i}>
+                        <td className="border border-black px-2 py-1 font-semibold w-1/3">
+                          {label} :
+                        </td>
+                        <td className="border border-black px-2 py-1">
+                          {value || "\u00A0"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-</div>
+                <p className="font-semibold mb-2">
+                  REFERENCE PM PROCEDURE SPECIFICATION : TFP05-001
+                </p>
 
-      </div>
+                {/* Checklist */}
+                <table className="w-full border border-black mb-4">
+                  <thead>
+                    <tr className="font-semibold text-center">
+                      <th className="border border-black">NO.</th>
+                      <th className="border border-black">ASSEMBLY ITEM</th>
+                      <th className="border border-black">REQUIREMENTS</th>
+                      <th className="border border-black">ACTIVITY</th>
+                      <th className="border border-black">ACTUAL</th>
+                      <th className="border border-black">FREQ</th>
+                      <th className="border border-black">REMARKS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {JSON.parse(selectedReport.procedure_specs || "[]").map((row, i) => (
+                      <tr key={i}>
+                        <td className="border border-black text-center">{i + 1}</td>
+                        <td className="border border-black">{row.item}</td>
+                        <td className="border border-black">{row.req}</td>
+                        <td className="border border-black text-center">{row.activity}</td>
+                        <td className="border border-black text-center">{row.actual}</td>
+                        <td className="border border-black text-center">{row.freq}</td>
+                        <td className="border border-black text-center">{row.remarks}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-      {/* Footer */}
-      <div className="flex justify-end p-4 border-t">
-   
-        <button
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700"
-          onClick={() => setViewModal(false)}
-        >
-          <i className="fa fa-close"></i> Close
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                {/* Flatness */}
+                <h3 className="text-center font-bold mb-2">
+                  FLATNESS INSPECTION DETAILS
+                </h3>
 
-        </AuthenticatedLayout>
-    );
+                <table className="w-full border border-black mb-4">
+                  <thead>
+                    <tr className="font-semibold text-center">
+                      <th className="border border-black">NO.</th>
+                      <th className="border border-black">
+                        FLATNESS CHECK (Granite Grade B)
+                      </th>
+                      <th className="border border-black">IMAGE REFERENCE</th>
+                      <th className="border border-black">REQUIRED VALUE</th>
+                      <th className="border border-black">ACTUAL</th>
+                      <th className="border border-black">
+                        RESULT (Pass / Fail)
+                      </th>
+                      <th className="border border-black">REMARKS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {JSON.parse(selectedReport.flatness_inspection || "[]")
+                      .slice(0, 4)
+                      .map((row, i) => (
+                        <tr key={i}>
+                          <td className="border border-black text-center">{row.no}</td>
+                          <td className="border border-black">{row.point}</td>
+
+                          {i === 0 && (
+                            <td
+                              className="border border-black text-center align-middle"
+                              rowSpan={5}
+                            >
+                              <img
+                                src="/images/granite_image.png"
+                                className="mx-auto h-28 object-contain"
+                              />
+                            </td>
+                          )}
+
+                          <td className="border border-black text-center">
+                            {row.required}
+                          </td>
+                          <td className="border border-black text-center">{row.actual}mm</td>
+                          <td className="border border-black text-center">{row.result}</td>
+                          <td className="border border-black text-center">{row.remarks}</td>
+                        </tr>
+                      ))}
+
+                    {/* MAX - MIN */}
+                    {JSON.parse(selectedReport.flatness_inspection || "[]")
+                      .slice(4, 5)
+                      .map((row, i) => (
+                        <tr key={i}>
+                          <td className="border border-black text-center">5</td>
+                          <td className="border border-black">
+                            FLATNESS (MAX - MIN)
+                          </td>
+                          <td className="border border-black text-center">
+                            {row.required}
+                          </td>
+                          <td className="border border-black text-center">{row.actual}mm</td>
+                          <td className="border border-black text-center">{row.result}</td>
+                          <td className="border border-black text-center">{row.remarks}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+
+                {/* Verification */}
+                <div className="flex justify-end">
+                  <table className="w-1/2 mb-4 text-sm">
+                    <tbody>
+                      <tr>
+                        <td
+                          className="border-r border-black font-semibold text-center align-middle"
+                          rowSpan={3}
+                        >
+                          VERIFIED BY:
+                        </td>
+
+                        <td className="border border-black px-3 py-2 flex justify-between items-center">
+                          <span>
+                            Technician:{" "}
+                            <span
+                              className={`px-2 py-1 rounded-lg text-xs font-semibold ${selectedReport.senior_tech ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+                                }`}
+                            >
+                              {selectedReport.senior_tech || "Pending..."}
+                            </span>
+                          </span>
+
+                          {["pmtech", "toolcrib", "seniortech", "tooling"].includes(emp_data?.emp_role) && !selectedReport.senior_tech ? (
+                            selectedReport.performed_by !== emp_data?.emp_name ? (
+                              <button
+                                className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+                                onClick={() => handleVerify("senior_tech")}
+                              >
+                                <i className="fas fa-check"></i> Verify
+                              </button>
+                            ) : (
+                              <span className="ml-2 px-2 py-1 bg-red-100 text-red-600 border-1 border-red-500 text-xs rounded">
+                                Cannot verify own checklist
+                              </span>
+                            )
+                          ) : null}
+
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="border border-black px-3 py-2 flex justify-between items-center">
+                          <span>
+                            QA:{" "}
+                            <span
+                              className={`px-2 py-1 rounded-lg text-xs font-semibold ${selectedReport.qa_sign ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+                                }`}
+                            >
+                              {selectedReport.qa_sign || "Pending..."}
+                            </span>
+                          </span>
+
+                          {["esd"].includes(emp_data?.emp_role) &&
+                            selectedReport.senior_tech &&
+                            !selectedReport.qa_sign && (
+                              <button
+                                className="ml-2 px-2 py-1 bg-emerald-500 border-1 border-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+                                onClick={() => handleVerify("qa_sign")}
+                              >
+                                <i className="fas fa-check"></i> Verify
+                              </button>
+                            )}
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="border border-black px-3 py-2 flex justify-between items-center">
+                          <span>
+                            Second Eye Verifier:{" "}
+                            <span
+                              className={`px-2 py-1 rounded-lg text-xs font-semibold ${selectedReport.second_eye_verifier ? "bg-green-100 border border-green-500 text-green-600" : "bg-yellow-100 border border-yellow-500 text-yellow-600"
+                                }`}
+                            >
+                              {selectedReport.second_eye_verifier || "Pending..."}
+                            </span>
+                          </span>
+
+                          {["engineer"].includes(emp_data?.emp_role) &&
+                            selectedReport.senior_tech &&
+                            selectedReport.qa_sign &&
+                            !selectedReport.second_eye_verifier && (
+                              <button
+                                className="ml-2 px-2 py-1 bg-emerald-500 text-white text-xs rounded hover:bg-emerald-600"
+                                onClick={() => handleVerify("second_eye_verifier")}
+                              >
+                                <i className="fas fa-check"></i> Verify
+                              </button>
+                            )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+
+
+                {/* Legend */}
+                <table className="w-full border border-black text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="border border-black font-semibold w-1/5 px-2 py-1">
+                        LEGEND
+                      </td>
+                      <td className="border border-black px-2 py-1">
+                        M = Monthly; Q = Quarterly; S = Semi-Annually; A = Annually
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td className="border border-black font-semibold px-2 py-1">
+                        ACTIVITY CODE
+                      </td>
+                      <td className="border border-black px-2 py-1">
+                        A-Check; B-Clean; C-Lubricate; D-Adjust; E-Align; F-Calibrate;
+                        G-Modify; H-Repair; I-Replace; J-Refill; K-Drain; L-Measure;
+                        M-Scan/Disk Defragment; N-Change Oil; NA-Not Applicable
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td
+                        className="border border-black px-2 py-1 text-right font-semibold"
+                        colSpan={2}
+                      >
+                        TELFORD SVC. PHILS., INC. — Maint-75 (Rev.1)
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end p-4 border-t">
+
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700"
+                onClick={() => setViewModal(false)}
+              >
+                <i className="fa fa-close"></i> Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </AuthenticatedLayout>
+  );
 }

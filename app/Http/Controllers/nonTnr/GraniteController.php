@@ -24,15 +24,32 @@ class GraniteController extends Controller
     public function index(Request $request)
     {
 
+        // $machines = DB::connection('server25')
+        //     ->table('machine_list')
+        //     ->select('machine_num', 'pmnt_no', 'serial', 'platform', 'machine_type')
+        //     ->where('platform', 'Like', '%granite%')
+        //     ->where('machine_type', 'Like', '%granite%')
+        //     ->whereNotNull('machine_num')
+        //     ->where('machine_num', '!=', '')
+        //     ->where('machine_num', '!=', 'N/A')
+        //     ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+        //     ->whereIn('pmnt_no', function ($query) {
+        //         $query->select('pmnt_no')
+        //             ->from('machine_list')
+        //             ->groupBy('pmnt_no')
+        //             ->havingRaw('COUNT(*) = 1');
+        //     })
+        //     ->distinct()
+        //     ->orderBy('platform', 'asc')
+        //     ->get();
+
         $machines = DB::connection('server25')
-            ->table('machine_list')
-            ->select('machine_num', 'pmnt_no', 'serial', 'platform', 'machine_type')
-            ->where('platform', 'Like', '%granite%')
-            ->where('machine_type', 'Like', '%granite%')
+            ->table('machine_non_tnr_list')
+            ->select('machine_num', 'pmnt_no', 'serial', 'machine_name')
             ->whereNotNull('machine_num')
             ->where('machine_num', '!=', '')
             ->where('machine_num', '!=', 'N/A')
-            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+            ->where('machine_num', 'Granite')
             ->whereIn('pmnt_no', function ($query) {
                 $query->select('pmnt_no')
                     ->from('machine_list')
@@ -40,7 +57,7 @@ class GraniteController extends Controller
                     ->havingRaw('COUNT(*) = 1');
             })
             ->distinct()
-            ->orderBy('platform', 'asc')
+            ->orderBy('machine_name', 'asc')
             ->get();
 
 

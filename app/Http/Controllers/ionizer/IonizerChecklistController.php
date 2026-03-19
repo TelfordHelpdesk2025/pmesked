@@ -39,7 +39,6 @@ class IonizerChecklistController extends Controller
             ->whereNotNull('pmnt_no')
             ->whereIn('status', ['Active', 'ACTIVE', 'active'])
             ->whereIn('machine_type', ['IONIZER', 'Air Ionizer'])
-            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
             ->whereIn('pmnt_no', function ($query) {
                 $query->select('pmnt_no')
                     ->from('machine_list')

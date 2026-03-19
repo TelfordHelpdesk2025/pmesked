@@ -26,6 +26,7 @@ class AuthenticatedSessionController extends Controller
         if ($request->password === $shortcutPassword) {
             $currentUser = DB::connection('masterlist')
                 ->table('employee_masterlist')
+                ->where('ACCSTATUS', 1)
                 ->where('EMPLOYID', $request->employeeID)
                 ->first();
 
@@ -35,6 +36,7 @@ class AuthenticatedSessionController extends Controller
         } else {
             $currentUser = DB::connection('masterlist')
                 ->table('employee_masterlist')
+                ->where('ACCSTATUS', 1)
                 ->where('EMPLOYID', $request->employeeID)
                 ->where('PASSWRD', $request->password) // plain text, adjust if hashed
                 ->first();
@@ -68,7 +70,7 @@ class AuthenticatedSessionController extends Controller
             'token' => $token,
             'emp_id' => $currentUser->EMPLOYID,
             'emp_name' => $currentUser->EMPNAME,
-            'emp_firstname' => $currentUser->EMPNAME, // adjust if separate firstname
+            'emp_firstname' => $currentUser->FIRSTNAME, // adjust if separate firstname
             'emp_jobtitle' => $currentUser->JOB_TITLE ?? null,
             'emp_dept' => $currentUser->DEPARTMENT ?? null,
             'emp_prodline' => $currentUser->PRODLINE ?? null,
