@@ -101,7 +101,6 @@ class SchedulerController extends Controller
         $machines = Machine::select('machine_num', 'pmnt_no', 'serial', 'machine_platform')
             ->whereNotNull('machine_num')
             ->whereNotIn('status', ['Write-Off'])
-            ->whereNotIn('platform', ['NON TNR', 'NON T&R', 'IONIZER', 'N/A', 'Granite', '-'])
             ->where('machine_num', '!=', '')
             ->whereIn('pmnt_no', function ($query) {
                 $query->select('pmnt_no')

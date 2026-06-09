@@ -29,6 +29,7 @@ use Inertia\Inertia;
 require __DIR__ . '/auth.php';
 require __DIR__ . '/general.php';
 require __DIR__ . '/granite.php';
+require __DIR__ . '/ionizer.php';
 
 // 📂 PDF list
 Route::get('/pdfs', [PdfController::class, 'listPdfs'])->name('pdfs.index');
@@ -194,11 +195,11 @@ Route::prefix('non-tnr')->group(function () {
     Route::post('/mass-approve', [NonTnrMassAprovedController::class, 'massApprove'])->name('non_tnr.mass.approve');
 });
 
-Route::prefix('/ionizer')->group(function () {
-    Route::get('/mass-approve', [IonizerMassApprovedController::class, 'index'])->name('ionizer.mass.index');
-    Route::post('/tech-verify', [IonizerMassApprovedController::class, 'techVerify'])->name('ionizer.tech.verify');
-    Route::post('/qa-verify', [IonizerMassApprovedController::class, 'qaVerify'])->name('ionizer.qa.verify');
-});
+// Route::prefix('/ionizer')->group(function () {
+//     Route::get('/mass-approve', [IonizerMassApprovedController::class, 'index'])->name('ionizer.mass.index');
+//     Route::post('/tech-verify', [IonizerMassApprovedController::class, 'techVerify'])->name('ionizer.tech.verify');
+//     Route::post('/qa-verify', [IonizerMassApprovedController::class, 'qaVerify'])->name('ionizer.qa.verify');
+// });
 
 // Mass ionizer approval index
 Route::get('/ionizer/ionizer-mass-approval', [IonizerCalibrationMassApprovedController::class, 'index'])

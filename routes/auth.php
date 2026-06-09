@@ -21,7 +21,7 @@ Route::prefix($app_name)->group(function () {
   Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login');
 
   // Logout
-  Route::post('/logout', [AuthenticationController::class, 'logout'])->name('logout');
+  Route::delete('/logout', [AuthenticationController::class, 'logout'])->name('logout');
 
 
   Route::get("/unauthorized", function () {

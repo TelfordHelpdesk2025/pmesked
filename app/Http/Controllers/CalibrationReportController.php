@@ -36,7 +36,7 @@ class CalibrationReportController extends Controller
                     ->havingRaw('COUNT(*) = 1');
             })
             ->distinct()
-            ->orderBy('machine_platform', 'asc')
+            ->orderBy('id', 'desc')
             ->get();
 
         // 🔹 Pagination & search params

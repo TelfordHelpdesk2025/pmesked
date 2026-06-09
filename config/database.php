@@ -91,6 +91,26 @@ return [
             ]) : [],
         ],
 
+        'machine_old' => [
+            'driver' => 'mysql',
+            'url' => env('MOCDB_URL'),
+            'host' => env('MOCDB_HOST', '127.0.0.1'),
+            'port' => env('MOCDB_PORT', '3306'),
+            'database' => env('MOCDB_DATABASE', 'laravel'),
+            'username' => env('MOCDB_USERNAME', 'root'),
+            'password' => env('MOCDB_PASSWORD', ''),
+            'unix_socket' => env('MOCDB_SOCKET', ''),
+            'charset' => env('MOCDB_CHARSET', 'utf8mb4'),
+            'collation' => env('MOCDB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'masterlist' => [
             'driver' => 'mysql',
             'url' => env('ADB_URL'),

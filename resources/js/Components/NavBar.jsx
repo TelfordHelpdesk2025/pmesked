@@ -12,15 +12,13 @@ export default function NavBar() {
 // };
 
 const logout = () => {
+    // Clear client-side storage
     localStorage.clear();
     sessionStorage.clear();
 
-    router.post(route('logout'), {
-        onFinish: () => {
-            // optional: force redirect if needed
-            // window.location.href = route('login');
-            window.location.reload();
-        },
+    // Call Laravel logout route
+    router.delete(route('logout'), {
+        preserveScroll: false,
     });
 };
 

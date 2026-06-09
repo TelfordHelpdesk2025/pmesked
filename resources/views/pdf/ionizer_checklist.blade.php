@@ -77,15 +77,17 @@
                 <td>{{ $record->pm_due }}</td>
             </tr>
             <tr>
-                <th>Serial</th>
-                <td>{{ $record->serial }}</td>
+                <!-- <th>Serial</th>
+                <td>{{ $record->serial }}</td> -->
+                <th>Frequency</th>
+                <td>{{ $record->frequency }}</td>
                 <th>Performed By</th>
                 <td>{{ $record->performed_by }} <br> {{ \Carbon\Carbon::parse($record['created_at'])->format('m/d/Y h:i A') }}</td>
             </tr>
-            <tr>
+            <!-- <tr>
                 <th>Frequency</th>
                 <td colspan="3">{{ $record->frequency }}</td>
-            </tr>
+            </tr> -->
             <tr>
                 <th>Technician Verifier</th>
                 <td>{{ $record->tech_sign }} <br> {{ \Carbon\Carbon::parse($record['tech_sign_date'])->format('m/d/Y h:i A') }}</td>

@@ -145,10 +145,14 @@
     <table>
         <thead>
             <tr>
-                <th>#</th>
-                <th>Assy Item</th>
-                <th style="font-size: 8px;">Description</th>
-                <th style="font-size: 8px;">Requirements</th>
+                <th rowspan="2">#</th>
+                <th rowspan="2">Assy Item</th>
+                <th rowspan="2" style="font-size: 8px;">Description</th>
+                <th rowspan="2" style="font-size: 8px;">Requirements</th>
+                <th colspan="3">First Cycle</th>
+                <th colspan="3">Second Cycle</th>
+            </tr>
+            <tr>
                 <th>Activity</th>
                 <th style="font-size: 8px;">Compliance</th>
                 <th>Remarks</th>

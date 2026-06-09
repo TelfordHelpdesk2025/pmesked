@@ -4,10 +4,7 @@ import DataTable from "@/Components/DataTable";
 import { router, usePage } from "@inertiajs/react";
 import axios from "axios";
 
-export default function Index({ tableData, reports, filters, machines, empData, items }) {
-
-
-
+export default function Index({ reports, filters, machines, empData, items }) {
   const { flash, emp_data } = usePage().props;
 
   const usageStartDate = new Date("2025-11-22");
@@ -19,20 +16,7 @@ export default function Index({ tableData, reports, filters, machines, empData, 
   return 681 + diffDays; // 681 value nung 11/22/2025
 };
 
-  const safeArray = (data) => {
-  if (Array.isArray(data)) return data;
 
-  if (typeof data === "string") {
-    try {
-      return JSON.parse(data);
-    } catch (e) {
-      console.error("Invalid JSON:", data);
-      return [];
-    }
-  }
-
-  return [];
-};
 
   const today = new Date();
   const nextWeek = new Date(today);
@@ -241,7 +225,7 @@ const handleChange = (e) => {
         serial: machine.serial,
         description: "AIR IONIZER",
         frequency: "Weekly",
-        performed_by: emp_data?.emp_name || "",
+        performed_by: empData?.emp_name || "",
       });
       setError("");
     } else {
@@ -251,7 +235,7 @@ const handleChange = (e) => {
         serial: "",
         description: "",
         frequency: "",
-        performed_by: emp_data?.emp_name || "",
+        performed_by: empData?.emp_name || "",
       });
       setError(`Item "${value}" not found. Please add it first in the inventory.`);
     }
@@ -372,14 +356,14 @@ const handleChange = (e) => {
   };
 
   // --- Role-based filtering (QA only sees rows without QA sign) ---
-  const isQaUser = ["esd"].includes(emp_data?.emp_role);
+  const isQaUser = ["esd"].includes(emp_data.emp_role);
   const filteredReports = isQaUser
-    ? tableData.data.filter((item) => !item.qa_sign || item.qa_sign.trim() === "")
-    : tableData.data;
+    ? reports.data.filter((item) => !item.qa_sign || item.qa_sign.trim() === "")
+    : reports.data;
 
   // --- Table Data with Actions ---
   const dataWithAction = filteredReports.map((item) => {
-    const isTechUser = ["seniortech", "engineer"].includes(emp_data?.emp_role)
+    const isTechUser = ["seniortech", "engineer"].includes(emp_data.emp_role)
 
     const disableCheckbox =
       (isTechUser && item.tech_sign && item.tech_sign.trim() !== "") ||
@@ -464,12 +448,12 @@ const handleChange = (e) => {
           ]}
           data={dataWithAction}
           meta={{
-            from: tableData.from,
-            to: tableData.to,
-            total: tableData.total,
-            links: tableData.links,
-            currentPage: tableData.current_page,
-            lastPage: tableData.last_page,
+            from: reports.from,
+            to: reports.to,
+            total: reports.total,
+            links: reports.links,
+            currentPage: reports.current_page,
+            lastPage: reports.last_page,
           }}
           routeName={route("ionizer.index")}
           filters={filters}
@@ -548,7 +532,7 @@ const handleChange = (e) => {
                           <p className="text-red-600 text-sm mt-1">
                             {error}{" "}
                             <a
-                              href="http://machine-portal:90/mc_inventory"
+                              href="http://machine-portal:90/ionizer/list/index"
                               target="_blank"
                               rel="noopener noreferrer"
                               className="underline text-blue-600"
@@ -572,7 +556,7 @@ const handleChange = (e) => {
                        
                       
                     </tr>
-                    <tr>
+                    {/* <tr>
                        <td className="border p-2">Serial Number</td>
                       <td className="border p-2">
                         <input
@@ -584,18 +568,8 @@ const handleChange = (e) => {
                           readOnly
                         />
                       </td>
-                      <td className="border p-2">Performed By</td>
-                      <td className="border p-2">
-                        <input
-                          type="text"
-                          name="performed_by"
-                          value={formData.performed_by}
-                          onChange={handleChange}
-                          className="w-full border rounded p-1 bg-gray-100"
-                          readOnly
-                        />
-                      </td>
-                    </tr>
+                      
+                    </tr> */}
                     <tr>
                       <td className="border p-2">PM Frequency</td>
                       <td className="border p-2">
@@ -606,6 +580,17 @@ const handleChange = (e) => {
                           onChange={handleChange}
                           className="w-full border rounded p-1"
                           required
+                        />
+                      </td>
+                      <td className="border p-2">Performed By</td>
+                      <td className="border p-2">
+                        <input
+                          type="text"
+                          name="performed_by"
+                          value={formData.performed_by}
+                          onChange={handleChange}
+                          className="w-full border rounded p-1 bg-gray-100"
+                          readOnly
                         />
                       </td>
                     </tr>
@@ -1109,26 +1094,25 @@ const handleChange = (e) => {
             <th className="border p-2">Remarks</th>
           </tr>
         </thead>
-       <tbody>
-  {safeArray(viewData?.check_item).map((row, idx) => (
-    <tr key={`ci-${idx}`} className="text-center">
-      <td className="border p-2">{row.assy_item}</td>
-      <td className="border p-2">{row.requirement}</td>
-      <td className="border p-2">{row.activity}</td>
-      <td className="border p-2 text-center">
-        <input
-          type="checkbox"
-          checked={row.compliance === 1}
-          readOnly
-        />
-      </td>
-      <td className="border p-2">
-        {row.date ? new Date(row.date).toLocaleDateString("en-US") : ""}
-      </td>
-      <td className="border p-2">{row.remarks}</td>
-    </tr>
-  ))}
-</tbody>
+        <tbody>
+          {viewData?.check_item?.map((row, idx) => (
+            <tr key={`ci-${idx}`} className="text-center">
+              <td className="border p-2">{row.assy_item}</td>
+              <td className="border p-2">{row.requirement}</td>
+              <td className="border p-2">{row.activity}</td>
+              <td className="border p-2 text-center">
+                <input 
+                 type="checkbox" 
+                  checked={row.compliance === 1} 
+                  className="rounded-full cursor-not-allowed checked:bg-blue-400 checked:border-green-800 "
+                  readOnly 
+                />
+              </td>
+              <td className="border p-2">{row.date ? new Date(row.date).toLocaleDateString("en-US") : ""}</td>
+              <td className="border p-2">{row.remarks}</td>
+            </tr>
+          ))}
+        </tbody>
       </table>
 
       {/* --- Verification Reading --- */}
@@ -1154,19 +1138,24 @@ const handleChange = (e) => {
           </tr>
         </thead>
         <tbody>
-  {safeArray(viewData?.verification_reading).map((row, idx) => (
-    <tr key={`vr-${idx}`}>
-      <td className="border p-2">{row.parameter}</td>
-      <td className="border p-2">{row.specs_value}</td>
-      <td className="border p-2">{row.trial1_min}</td>
-      <td className="border p-2">{row.trial1_max}</td>
-      <td className="border p-2">{row.trial2_min}</td>
-      <td className="border p-2">{row.trial2_max}</td>
-      <td className="border p-2">{row.trial3_min}</td>
-      <td className="border p-2">{row.trial3_max}</td>
-    </tr>
-  ))}
-</tbody>
+          {viewData?.verification_reading?.map((row, idx) => (
+            <tr key={`vr-${idx}`}>
+              <td className="border p-2">{row.parameter}</td>
+              <td className="border p-2">{row.specs_value}</td>
+              <td className="border p-2">{row.trial1_min}</td>
+              <td className="border p-2">{row.trial1_max}</td>
+              <td className="border p-2">{row.trial2_min}</td>
+              <td className="border p-2">{row.trial2_max}</td>
+              <td className="border p-2">{row.trial3_min}</td>
+              <td className="border p-2">{row.trial3_max}</td>
+            </tr>
+          ))}
+          <tr>
+            <td className="border p-2">OMEGA DTHM (REFERRENCE EQUIPMENT)</td>
+            <td colSpan={3} className="border p-2">{viewData?.dthm_temp} °C</td>
+            <td colSpan={5} className="border p-2">{viewData?.dthm_rh} %RH</td>
+          </tr>
+        </tbody>
       </table>
 
       {/* --- Standard Use Verification --- */}
@@ -1183,15 +1172,15 @@ const handleChange = (e) => {
           </tr>
         </thead>
         <tbody>
-  {safeArray(viewData?.std_use_verification).map((row, idx) => (
-    <tr key={`sv-${idx}`}>
-      <td className="border p-2">{row.description}</td>
-      <td className="border p-2">{row.instrument1}</td>
-      <td className="border p-2">{row.instrument2}</td>
-      <td className="border p-2">{row.instrument3}</td>
-    </tr>
-  ))}
-</tbody>
+          {viewData?.std_use_verification?.map((row, idx) => (
+            <tr key={`sv-${idx}`}>
+              <td className="border p-2">{row.description}</td>
+              <td className="border p-2">{row.instrument1}</td>
+              <td className="border p-2">{row.instrument2}</td>
+              <td className="border p-2">{row.instrument3}</td>
+            </tr>
+          ))}
+        </tbody>
       </table>
 
       {/* Remarks & Usage */}
@@ -1217,7 +1206,7 @@ const handleChange = (e) => {
 {/* --- Verifier Buttons --- */}
 <div className="flex justify-end gap-2 mt-4">
   {/* Tech Sign Button */}
-  {["seniortech", "engineer"].includes(emp_data?.emp_role) &&
+  {["seniortech", "engineer"].includes(emp_data.emp_role) &&
     !viewData?.tech_sign && (
       <button
         onClick={() => handleVerify("tech")}
@@ -1228,7 +1217,7 @@ const handleChange = (e) => {
   )}
 
   {/* QA Sign Button */}
-  {["esd"].includes(emp_data?.emp_role) &&
+  {["esd"].includes(emp_data.emp_role) &&
     viewData?.tech_sign && !viewData?.qa_sign && (
       <button
         onClick={() => handleVerify("qa")}

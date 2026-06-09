@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\nonTnr;
 
 use App\Http\Controllers\Controller;
-use App\Models\Machine;
+use App\Models\NonTnrMachine;
 use App\Models\NonTnrCalibrationReport;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
@@ -20,18 +20,18 @@ class NonTnrCalibrationReportController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $machines = Machine::select('*')
+        $machines = NonTnrMachine::select('*')
             ->whereNotNull('machine_num')
             ->where('machine_num', '!=', '')
-            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+            ->whereIn('remarks', ['Active', 'ACTIVE', 'active'])
             ->whereIn('pmnt_no', function ($query) {
                 $query->select('pmnt_no')
-                    ->from('machine_list')
+                    ->from('machine_non_tnr_list')
                     ->groupBy('pmnt_no')
                     ->havingRaw('COUNT(*) = 1');
             })
             ->distinct()
-            ->orderBy('machine_platform', 'asc')
+            ->orderBy('id', 'desc')
             ->get();
 
         return Inertia::render('Calibration/NonTnrCalibrationReport', [

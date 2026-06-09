@@ -204,7 +204,7 @@ export default function MassApprovalIonizerChecklist({ ionizerReports, empData }
   </h3>
 
   <div className="flex gap-2 items-center">
-    
+
     {/* Close Button */}
     <button
       onClick={() => setShowView(false)}
@@ -272,7 +272,7 @@ export default function MassApprovalIonizerChecklist({ ionizerReports, empData }
       <div className="text-center my-3 bg-gradient-to-r from-white to-gray-500 text-rose-800 rounded">
                   <h5 className="font-semibold p-2 pt-4"><i className="fa-solid fa-bars-staggered"></i> ACTIVITY CODE</h5>
                   <p className=" text-sm p-2 pb-4 ">
-                   A - Check ; B - Clean ; C - Lubricant ; D - Adjust ; E - Align ; 
+                   A - Check ; B - Clean ; C - Lubricant ; D - Adjust ; E - Align ;
                    F - Calibrate ; G - Modify ; H - Repair ; I - Replace ; L - Measure
                   </p>
                 </div>
@@ -294,11 +294,11 @@ export default function MassApprovalIonizerChecklist({ ionizerReports, empData }
               <td className="border p-2">{row.requirement}</td>
               <td className="border p-2">{row.activity}</td>
               <td className="border p-2 text-center">
-                <input 
-                 type="checkbox" 
-                  checked={row.compliance === 1} 
+                <input
+                 type="checkbox"
+                  checked={row.compliance === 1}
                   className="rounded-full cursor-not-allowed checked:bg-gray-400 checked:border-green-500 "
-                  readOnly 
+                  readOnly
                 />
               </td>
               <td className="border p-2">{row.date ? new Date(row.date).toLocaleDateString("en-US") : ""}</td>
@@ -418,7 +418,7 @@ export default function MassApprovalIonizerChecklist({ ionizerReports, empData }
 
 
     </div>
-    
+
   </div>
 )}
 

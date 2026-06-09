@@ -124,7 +124,7 @@ export default function Admin({ tableData, tableFilters, emp_data }) {
                             </div>
 
                             {/* Admin Controls */}
-                            {["superadmin", "admin"].includes(emp_data?.emp_role) &&
+                            {["superadmin", "admin", "engineer"].includes(emp_data?.emp_role) &&
                                 !row.emp_role.includes("superadmin") && (
                                     <div className="mt-6 space-y-4">
                                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">

@@ -42,28 +42,39 @@ class AuthenticationController extends Controller
 
     public function logout(Request $request)
     {
-        // Kunin ang emp_id bago i-invalidate ang session
+        // Kunin emp_id bago mawala session
         $empId = session('emp_data.emp_id') ?? null;
 
-        // Laravel auth logout
+        // Logout user
         Auth::guard('web')->logout();
 
-        // Invalidate session safely
+        // Invalidate current session
         $request->session()->invalidate();
+
+        // Regenerate CSRF token
         $request->session()->regenerateToken();
 
-        // Delete ALL sessions ng user
+        // Delete all custom sessions (kung meron kang auth_sessions table)
         if ($empId) {
-            DB::table('auth_sessions')
+            DB::connection('mysql')->table('auth_sessions')
                 ->where('emp_id', $empId)
                 ->delete();
         }
 
-        // Cleanup expired sessions (older than 3 hours)
-        // DB::table('auth_sessions')
-        //     ->where('generated_at', '<', now()->subHours(3))
-        //     ->delete();
+        // Optional: cleanup old sessions
 
+        DB::connection('mysql')->table('auth_sessions')
+            ->where('generated_at', '<', now()->subMinutes(30))
+            ->where('emp_id', $empId)
+            ->delete();
+
+        DB::connection('mysql')->table('auth_sessions')
+            ->where('generated_at', '<', now()->subMinutes(30))
+            ->where('emp_dept', '!=', 'Equipment Engineering')
+            ->delete();
+
+
+        // Redirect to login page
         return redirect()->route('login');
     }
 }

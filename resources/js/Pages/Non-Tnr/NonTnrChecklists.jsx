@@ -349,7 +349,7 @@ const handleVerify = (id) => {
                           <p className="text-red-600 text-sm mt-1">
                             {error}{" "}
                             <a
-                              href="http://192.168.1.26/mc-inventory-beta/admin"
+                              href="http://machine-portal:90/mc_inventory/non_tnr/machines/list/index"
                               target="_blank"
                               rel="noopener noreferrer"
                               className="underline text-blue-600"
@@ -391,8 +391,8 @@ const handleVerify = (id) => {
                           name="frequency"
                           value={formData.frequency}
                           onChange={handleChange}
-                          className="w-full border rounded p-1"
-                          required
+                          className="w-full border rounded p-1 bg-gray-100"
+                          readOnly
                         />
                       </td>
                     </tr>

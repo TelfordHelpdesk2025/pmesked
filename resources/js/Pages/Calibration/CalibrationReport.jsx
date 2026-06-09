@@ -69,11 +69,11 @@ const parsedDetails = Array.isArray(selectedReport?.cal_details)
 // 🔹 Calibration Standards (2 rows)
 const defaultStandards = [
   {
-    description: "Thermometer Calibrator",
+    description: "Thermometer Calibrator #3",
     cal_manufacturer: "OMEGA",
     model_no: "CL3512A",
-    cal_control_no: "CN 140",
-    serial_no: "03000256",
+    cal_control_no: "CN 1041",
+    serial_no: "22000859",
     accuracy: "N/A",
     cal_date: "", // user selects
     cal_due: "",  // user selects

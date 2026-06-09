@@ -52,7 +52,7 @@ class GraniteController extends Controller
             ->where('machine_num', 'Granite')
             ->whereIn('pmnt_no', function ($query) {
                 $query->select('pmnt_no')
-                    ->from('machine_list')
+                    ->from('machine_non_tnr_list')
                     ->groupBy('pmnt_no')
                     ->havingRaw('COUNT(*) = 1');
             })

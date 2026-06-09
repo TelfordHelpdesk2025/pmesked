@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\nonTnr;
 
 use App\Http\Controllers\Controller;
-use App\Models\Machine;
+use App\Models\NonTnrMachine;
 use App\Models\NonTnrChecklist;
 use App\Models\NonTnrChecklistItem;
 use Illuminate\Http\Request;
@@ -56,9 +56,21 @@ class NonTnrChecklistController extends Controller
         // Paginate results
         $reports = $query->paginate($perPage)->appends($request->all());
 
+        $machines = NonTnrMachine::whereNotNull('pmnt_no')
+            ->whereIn('remarks', ['Active', 'ACTIVE', 'active'])
+            ->whereIn('pmnt_no', function ($query) {
+                $query->select('pmnt_no')
+                    ->from('machine_non_tnr_list')
+                    ->groupBy('pmnt_no')
+                    ->havingRaw('COUNT(*) = 1');
+            })
+            ->distinct()
+            ->get();
+
         // Render Inertia page
         return Inertia::render('Non-Tnr/NonTnrChecklists', [
             'reports' => $reports,
+            'machines' => $machines,
             'filters' => $request->only([
                 'search',
                 'perPage',
@@ -67,17 +79,7 @@ class NonTnrChecklistController extends Controller
                 'page',
             ]),
             'templates' => NonTnrChecklistItem::orderByDesc('id')->get(),
-            'machines' => Machine::whereNotNull('pmnt_no')
-                ->whereIn('machine_type', ['NON T&R', 'NON TNR', 'Microscope'])
-                ->whereIn('status', ['Active', 'ACTIVE', 'active'])
-                ->whereIn('pmnt_no', function ($query) {
-                    $query->select('pmnt_no')
-                        ->from('machine_list')
-                        ->groupBy('pmnt_no')
-                        ->havingRaw('COUNT(*) = 1');
-                })
-                ->distinct()
-                ->get(),
+
             'empData' => [
                 'emp_id' => session('emp_data')['emp_id'] ?? null,
                 'emp_name' => session('emp_data')['emp_name'] ?? null,

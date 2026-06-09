@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\DataTableService;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Inertia\Inertia;
 
 
 class IonizerChecklistController extends Controller
@@ -23,34 +25,93 @@ class IonizerChecklistController extends Controller
         $this->datatable = $datatable;
     }
 
-    //old code 12052025
-    // Sa IonizerChecklistController@index
+    //old code 04272026
+    // public function index(Request $request)
+    // {
+    //     // Paginated IonizerChecklist (10 per page)
+    //     $reports = IonizerChecklist::orderBy('id', 'desc')->paginate(10);
+
+    //     // Template items for Add modal
+    //     $items = IonizerChecklistItem::orderBy('id', 'desc')->get();
+
+    //     // Machines list
+    //     $machines = DB::connection('server201')
+    //         ->table('machine_list')
+    //         ->whereNotNull('pmnt_no')
+    //         ->whereIn('status', ['Active', 'ACTIVE', 'active'])
+    //         ->whereIn('machine_type', ['IONIZER', 'Air Ionizer'])
+    //         ->whereIn('pmnt_no', function ($query) {
+    //             $query->select('pmnt_no')
+    //                 ->from('machine_list')
+    //                 ->groupBy('pmnt_no')
+    //                 ->havingRaw('COUNT(*) = 1');
+    //         })
+    //         ->orderBy('pmnt_no', 'asc')
+    //         ->get();
+
+
+    //     // Decode JSON fields safely
+    //     $reports->getCollection()->transform(function ($report) {
+    //         $report->check_item = is_string($report->check_item)
+    //             ? json_decode($report->check_item, true) ?? []
+    //             : ($report->check_item ?? []);
+
+    //         $report->verification_reading = is_string($report->verification_reading)
+    //             ? json_decode($report->verification_reading, true) ?? []
+    //             : ($report->verification_reading ?? []);
+
+    //         $report->std_use_verification = is_string($report->std_use_verification)
+    //             ? json_decode($report->std_use_verification, true) ?? []
+    //             : ($report->std_use_verification ?? []);
+
+    //         return $report;
+    //     });
+
+    //     return inertia('Ionizer/IonizerChecklist', [
+    //         'reports' => $reports,      // paginated data
+    //         'items' => $items,          // template items for Add modal
+    //         'machines' => $machines,
+    //         'filters' => $request->all(),
+    //         'tableFilters' => $request->only([
+    //             'search',
+    //             'perPage',
+    //             'sortBy',
+    //             'sortDirection',
+    //             'start',
+    //             'end',
+    //             'dropdownSearchValue',
+    //             'dropdownFields',
+    //         ]),
+    //         'empData' => [
+    //             'emp_id' => session('emp_data')['emp_id'] ?? null,
+    //             'emp_name' => session('emp_data')['emp_name'] ?? null,
+    //             'emp_jobtitle' => session('emp_data')['emp_jobtitle'] ?? null,
+    //         ],
+    //     ]);
+    // }
+
+
+
     public function index(Request $request)
     {
-        // Paginated IonizerChecklist (10 per page)
+        // 🔹 Paginated IonizerChecklist (for other usage)
         $reports = IonizerChecklist::orderBy('id', 'desc')->paginate(10);
 
-        // Template items for Add modal
+        // 🔹 Template items for Add modal
         $items = IonizerChecklistItem::orderBy('id', 'desc')->get();
 
-        // Machines list
-        $machines = DB::connection('server25')
+        // 🔹 Machines list
+        $machines = DB::connection('server201')
             ->table('machine_list')
+            ->select('*')
             ->whereNotNull('pmnt_no')
-            ->whereIn('status', ['Active', 'ACTIVE', 'active'])
             ->whereIn('machine_type', ['IONIZER', 'Air Ionizer'])
-            ->whereIn('pmnt_no', function ($query) {
-                $query->select('pmnt_no')
-                    ->from('machine_list')
-                    ->groupBy('pmnt_no')
-                    ->havingRaw('COUNT(*) = 1');
-            })
             ->orderBy('machine_type')
+            ->distinct()
             ->get();
 
-
-        // Decode JSON fields safely
-        $reports->getCollection()->transform(function ($report) {
+        // 🔥 FUNCTION: reusable JSON decoder
+        $decodeFields = function ($report) {
             $report->check_item = is_string($report->check_item)
                 ? json_decode($report->check_item, true) ?? []
                 : ($report->check_item ?? []);
@@ -64,11 +125,46 @@ class IonizerChecklistController extends Controller
                 : ($report->std_use_verification ?? []);
 
             return $report;
-        });
+        };
 
-        return inertia('Ionizer/IonizerChecklist', [
-            'reports' => $reports,      // paginated data
-            'items' => $items,          // template items for Add modal
+        // 🔹 Decode $reports (pagination)
+        $reports->getCollection()->transform($decodeFields);
+
+        // 🔹 Datatable result (THIS is used in View Modal)
+        $result = $this->datatable->handle(
+            $request,
+            'mysql',
+            'ionizer_checklist_tbl',
+            [
+                'conditions' => function ($query) {
+                    return $query->orderBy('id', 'desc');
+                },
+                'searchColumns' => [
+                    'control_no',
+                    'pm_date',
+                    'pm_due',
+                    'performed_by',
+                    'tech_sign',
+                    'qa_sign'
+                ],
+            ]
+        );
+
+        // 🔥 VERY IMPORTANT: decode tableData
+        if (isset($result['data']) && method_exists($result['data'], 'getCollection')) {
+            $result['data']->getCollection()->transform($decodeFields);
+        }
+
+        // 🔹 CSV export handling
+        if ($result instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+            return $result;
+        }
+
+        // 🔹 Return to Inertia
+        return Inertia::render('Ionizer/IonizerChecklist', [
+            'tableData' => $result['data'],   // ✅ FIXED (now decoded)
+            'reports' => $reports,
+            'items' => $items,
             'machines' => $machines,
             'filters' => $request->all(),
             'tableFilters' => $request->only([
@@ -81,15 +177,8 @@ class IonizerChecklistController extends Controller
                 'dropdownSearchValue',
                 'dropdownFields',
             ]),
-            'empData' => [
-                'emp_id' => session('emp_data')['emp_id'] ?? null,
-                'emp_name' => session('emp_data')['emp_name'] ?? null,
-                'emp_jobtitle' => session('emp_data')['emp_jobtitle'] ?? null,
-            ],
         ]);
     }
-
-
 
 
 
