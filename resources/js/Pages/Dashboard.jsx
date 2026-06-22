@@ -1047,7 +1047,7 @@ const isPpcDept = ppcRoles.includes(emp_data?.emp_dept?.toLowerCase());
                     </div>
 
                     {/* Link to full tracker */}
-                    <div className="flex justify-end">
+                    {/* <div className="flex justify-end">
                         <Button
                             className="bg-blue-500 hover:bg-blue-600 text-white"
                             onClick={() =>
@@ -1057,7 +1057,7 @@ const isPpcDept = ppcRoles.includes(emp_data?.emp_dept?.toLowerCase());
                             <Eye className="h-4 w-4 mr-2" />
                             View Full Machine Tracker
                         </Button>
-                    </div>
+                    </div> */}
                 </div>
             )}
         </AuthenticatedLayout>
