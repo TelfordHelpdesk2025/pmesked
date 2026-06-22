@@ -30,6 +30,7 @@ require __DIR__ . '/auth.php';
 require __DIR__ . '/general.php';
 require __DIR__ . '/granite.php';
 require __DIR__ . '/ionizer.php';
+require __DIR__ . '/tracker.php';
 
 // 📂 PDF list
 Route::get('/pdfs', [PdfController::class, 'listPdfs'])->name('pdfs.index');
@@ -63,11 +64,6 @@ Route::post('/calibration-reports', [CalibrationReportController::class, 'store'
 
 Route::delete('/calibration-reports-tnr/{id}', [CalibrationReportController::class, 'destroy'])
     ->name('calibration-reports.tnr.destroy');
-
-// Route::put('/calibration-reports/{calibrationReport}', [CalibrationReportController::class, 'update'])
-//     ->name('calibration-reports.update');
-// Route::delete('/calibration-reports/{calibrationReport}', [CalibrationReportController::class, 'destroy'])
-//     ->name('calibration-reports.destroy');
 Route::post('/calibration-reports/{report}/verify-qa', [CalibrationReportController::class, 'verifyQA'])
     ->name('calibration-reports.verify-qa');
 
@@ -195,11 +191,7 @@ Route::prefix('non-tnr')->group(function () {
     Route::post('/mass-approve', [NonTnrMassAprovedController::class, 'massApprove'])->name('non_tnr.mass.approve');
 });
 
-// Route::prefix('/ionizer')->group(function () {
-//     Route::get('/mass-approve', [IonizerMassApprovedController::class, 'index'])->name('ionizer.mass.index');
-//     Route::post('/tech-verify', [IonizerMassApprovedController::class, 'techVerify'])->name('ionizer.tech.verify');
-//     Route::post('/qa-verify', [IonizerMassApprovedController::class, 'qaVerify'])->name('ionizer.qa.verify');
-// });
+
 
 // Mass ionizer approval index
 Route::get('/ionizer/ionizer-mass-approval', [IonizerCalibrationMassApprovedController::class, 'index'])

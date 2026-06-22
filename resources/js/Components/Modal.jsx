@@ -1,8 +1,13 @@
-// Modal.jsx
-import { useEffect, useRef } from "react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+
+import { Button } from "@/components/ui/button";
 
 export default function Modal({
-    id,
     title = "Modal Title",
     buttonText = "",
     children,
@@ -11,45 +16,28 @@ export default function Modal({
     show = false,
     onClose = () => {},
 }) {
-    const modalRef = useRef(null);
-
-    useEffect(() => {
-        if (show) {
-            modalRef.current?.showModal();
-        } else {
-            modalRef.current?.close();
-        }
-    }, [show]);
-
     return (
         <>
             {buttonText && (
-                <button
-                    className={buttonClass}
-                    onClick={() => modalRef.current?.showModal()}
-                >
+                <Button className={buttonClass} onClick={() => {}}>
                     {buttonText}
-                </button>
+                </Button>
             )}
 
-            <dialog id={id} className="modal" ref={modalRef} onClose={onClose}>
-                <div className={`modal-box ${className}`}>
-                    <div>
-                        <button
-                            type="button"
-                            className="absolute btn btn-sm btn-circle btn-ghost right-2 top-2"
-                            onClick={() => {
-                                modalRef.current?.close();
-                                onClose();
-                            }}
-                        >
-                            ✕
-                        </button>
-                        <h3 className="text-lg font-bold">{title}</h3>
-                        <div className="pt-4">{children}</div>
-                    </div>
-                </div>
-            </dialog>
+            <Dialog
+                open={show}
+                onOpenChange={(open) => {
+                    if (!open) onClose();
+                }}
+            >
+                <DialogContent className={`sm:max-w-lg ${className}`}>
+                    <DialogHeader>
+                        <DialogTitle>{title}</DialogTitle>
+                    </DialogHeader>
+
+                    {children}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

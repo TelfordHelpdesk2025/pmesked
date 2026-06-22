@@ -17,7 +17,7 @@ class Scheduler extends Model
 
     use HasFactory;
 
-    protected $table = 'scheduler_tbl'; // kasi hindi plural
+    protected $table = 'scheduler_tbl'; 
 
     protected $fillable = [
         'pmnt_no',

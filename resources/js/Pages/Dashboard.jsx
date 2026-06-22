@@ -2,646 +2,1064 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Legend,
 } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    ClipboardList,
+    Eye,
+    Wrench,
+    CheckCircle2,
+    ArrowLeft,
+} from "lucide-react";
 
-export default function Dashboard(props) {
-  const { emp_data } = usePage().props;
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  // console.log(emp_data);
-
-  // Parse WW format (ex: WW501) into a Date (start of that week)
-  const parseWWToDate = (ww) => {
+// Parse WW format (e.g. "WW501") into a Date (start of that week).
+// IMPORTANT: build the base date from local Y/M/D components, NOT from a
+// "YYYY-MM-DD" string. `new Date("2024-11-03")` is parsed as UTC midnight,
+// which silently shifts by a day for anyone west of UTC (e.g. PH is fine,
+// but this kept the door open for bugs depending on server/browser TZ).
+const parseWWToDate = (ww) => {
     if (!ww || typeof ww !== "string" || !ww.startsWith("WW")) return null;
-    const weekNum = parseInt(ww.slice(2));
+    const weekNum = parseInt(ww.slice(2), 10);
     if (isNaN(weekNum)) return null;
-    const baseWeek = 501; // starting reference
-    const baseDate = new Date("2024-11-03"); // WW501 starts Nov 3, 2024
+    const baseWeek = 501;
+    const baseDate = new Date(2024, 10, 3); // Nov 3, 2024, local time
     const diffWeeks = weekNum - baseWeek;
     const result = new Date(baseDate);
     result.setDate(baseDate.getDate() + diffWeeks * 7);
     return result;
-  };
+};
 
-  const isDueToday = (ww) => {
+// Local YYYY-MM-DD key. Using toISOString() here (as the original code did)
+// converts to UTC first, which can make "today" compare as a different day
+// depending on the time of day / timezone. This stays in local time.
+const toDateKey = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+};
+
+const isDueToday = (ww) => {
     const dueDate = parseWWToDate(ww);
     if (!dueDate) return false;
-    const today = new Date().toISOString().split("T")[0];
-    return dueDate.toISOString().split("T")[0] === today;
-  };
+    return toDateKey(dueDate) === toDateKey(new Date());
+};
 
-  const isOverdue = (ww) => {
+const isOverdue = (ww) => {
     const dueDate = parseWWToDate(ww);
     if (!dueDate) return false;
-    const today = new Date().toISOString().split("T")[0];
-    return dueDate.toISOString().split("T")[0] < today;
-  };
+    return toDateKey(dueDate) < toDateKey(new Date());
+};
 
-  // props with fallback
-  const QAforApprovalcalReportsCount = props.QAforApprovalcalReportsCount ?? 0;
-  const EEforApprovalcalReportsCount = props.EEforApprovalcalReportsCount ?? 0;
-  const calibrationReportsCount = props.calibrationReportsCount ?? 0;
-  const seniortechAck = props.seniortechAck ?? 0;
-  const esdAck = props.esdAck ?? 0;
-  const senioreeAck = props.senioreeAck ?? 0;
-  const dueSoon = props.dueSoon ?? 0;
-  const overdue = props.overdue ?? 0;
-  const tnrCompleted = props.tnrCompleted ?? 0;
+// Guards against malformed/empty JSON columns instead of letting
+// JSON.parse() throw and crash the modal.
+const safeJsonParse = (value, fallback = []) => {
+    if (!value) return fallback;
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+        return fallback;
+    }
+};
 
-  // for verifier
-  const eeCalVerifierStatus = props.eeCalVerifierStatus ?? 0;
-  const qaCalVerifierStatus = props.qaCalVerifierStatus ?? 0;
-  const eeVerifierStatus = props.eeVerifierStatus ?? [];
-  const qaVerifierStatus = props.qaVerifierStatus ?? [];
+const CARD_COLOR_CLASSES = {
+    stone: "bg-stone-100 text-stone-500 hover:bg-stone-200",
+    orange: "bg-orange-100 text-orange-500 hover:bg-orange-200",
+    blue: "bg-blue-100 text-blue-500 hover:bg-blue-200",
+    yellow: "bg-yellow-100 text-yellow-500 hover:bg-yellow-200",
+    red: "bg-red-100 text-red-500 hover:bg-red-200",
+    green: "bg-green-100 text-green-500 hover:bg-green-200",
+    purple: "bg-purple-100 text-purple-500 hover:bg-purple-200",
+};
 
-  const checklistStatus = props.checklistStatus ?? [];
-  const latestReports = props.latestReports ?? [];
-  const dueTodayReports = props.dueTodayReports ?? [];
-  const overdueReports = props.overdueReports ?? [];
-  const completedSchedulers = props.completedSchedulers ?? [];
+// ---------------------------------------------------------------------------
+// Small reusable pieces
+// ---------------------------------------------------------------------------
 
-  const COLORS = ["#10B981", "#F59E0B"];
+function SummaryCard({ label, value, color = "stone", onClick }) {
+    return (
+        <Card
+            onClick={onClick}
+            className={`text-center transition-colors border-none shadow ${
+                CARD_COLOR_CLASSES[color] ?? ""
+            } ${onClick ? "cursor-pointer" : ""}`}
+        >
+            <CardContent className="pt-6">
+                <h2 className="text-2xl font-bold">{value}</h2>
+                <p className="text-sm opacity-80">{label}</p>
+            </CardContent>
+        </Card>
+    );
+}
 
-  // Job groups (reuse)
-  const qaJobs = ["esd"];
-
-  const eeJobs = ["superadmin","admin","engineer"];
-
-  const combinedJobs = [...qaJobs, ...eeJobs];
-
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
-  const [modalData, setModalData] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
-
-  const openModal = (title, data) => {
-    if (!data || data.length === 0) return;
-    setModalTitle(title);
-    setModalData(data);
-    setSelectedItem(null);
-    setModalOpen(true);
-  };
-
-  const renderCustomLegend = () => (
-    <ul className="flex gap-6 items-center justify-center">
-      {checklistStatus.map((entry, index) => (
-        <li key={`item-${index}`} className="flex items-center gap-2 text-gray-600">
-          <span
-            style={{
-              display: "inline-block",
-              width: 12,
-              height: 12,
-              backgroundColor: entry.name === "Completed" ? "#10B981" : "#FACC15",
-            }}
-          />
-          {entry.name}
-        </li>
-      ))}
-    </ul>
-  );
-
-  return (
-    <AuthenticatedLayout>
-      <Head title="Dashboard" />
-
-      <h1 className="text-2xl font-bold mb-6">TNR Checklist</h1>
-
-      {/* Only show this block if job title is in combinedJobs */}
-      {combinedJobs.includes(emp_data?.emp_role) && (
-        <div className="mt-6">
-          {/* 🔹 Summary Cards */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {/* Calibration Reports for Approval */}
-            <div className="p-4 bg-stone-100 rounded-lg shadow text-center cursor-pointer hover:bg-stone-200">
-              <h2 className="text-2xl font-bold text-stone-500">
-                {qaJobs.includes(emp_data?.emp_role)
-                  ? QAforApprovalcalReportsCount
-                  : eeJobs.includes(emp_data?.emp_role)
-                  ? EEforApprovalcalReportsCount
-                  : 0}
-              </h2>
-              <p className="text-gray-600">Calibration Reports for Approval</p>
-            </div>
-
-            {/* TNR for Approval */}
-            <div className="p-4 bg-orange-100 rounded-lg shadow text-center cursor-pointer hover:bg-orange-200">
-              <h2 className="text-2xl font-bold text-orange-500">
-                {qaJobs.includes(emp_data?.emp_role)
-                  ? esdAck
-                  : eeJobs.includes(emp_data?.emp_role)
-                  ? senioreeAck
-                  : 0}
-              </h2>
-              <p className="text-gray-600">TNR for Approval</p>
-            </div>
-          </div>
-
-          {/* 🔹 Charts */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {/* Bar Chart */}
-{eeJobs.includes(emp_data?.emp_role) ? (
-  <div className="bg-white p-4 shadow rounded-lg">
-    <h3 className="text-lg font-semibold mb-4 text-gray-600">
-      non-Tnr Cal Reports for approval
-    </h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={eeCalVerifierStatus} className="hover:text-gray-600">
-        <XAxis dataKey="name" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-       <p className="text-gray-600 font-medium">For Approval</p>
-        <Bar dataKey="value" radius={[8, 8, 0, 0]} label={{ position: "top" }}>
-          {eeCalVerifierStatus.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={entry.name === "For Approval" ? "#515257ff" : "#FACC15"}
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-) : (
-  <div className="bg-white p-4 shadow rounded-lg">
-    <h3 className="text-lg font-semibold mb-4 text-gray-600">
-      non-Tnr Cal Reports for approval
-    </h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={qaCalVerifierStatus}  className="hover:text-gray-600">
-        <XAxis dataKey="name" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-       <p className="text-gray-600 font-medium">For Approval</p>
-        <Bar dataKey="value" radius={[8, 8, 0, 0]} label={{ position: "top" }}>
-          {qaCalVerifierStatus.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={entry.name === "For Approval" ? "#515257ff" : "#FACC15"}
-            />
-          ))}
-        </Bar>
-       <p className="text-gray-600 font-medium">For Approval</p>
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-)}
-
-
-            {/* Pie Chart */}
-            {eeJobs.includes(emp_data?.emp_role) ? (
-            <div className="bg-white p-4 shadow rounded-lg">
-              <h3 className="text-lg font-semibold mb-4 text-gray-600">
-                non-TNR PM Checklist Status
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={eeVerifierStatus}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {eeVerifierStatus.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                      fill={entry.name === "For Approval" ? "#f78940ff" : "#FACC15"}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            ) : (
-              <div className="bg-white p-4 shadow rounded-lg">
-              <h3 className="text-lg font-semibold mb-4 text-gray-600">
-                non-TNR PM Checklist Status
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={qaVerifierStatus}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {qaVerifierStatus.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.name === "For Approval" ? "#f78940ff" : "#FACC15"}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-              )}
-          </div>
-        </div>
-      )}
-
-      {/* Department-level view */}
-      {["pmtech", "seniortech", "toolcrib", "tooling"].includes(emp_data?.emp_role) && (
-        <div>
-          {/* 🔹 Summary Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div
-              className="p-4 bg-blue-100 rounded-lg shadow text-center cursor-pointer hover:bg-blue-200"
-              onClick={() => openModal("Calibration Reports", latestReports)}
-            >
-              <h2 className="text-2xl font-bold text-blue-500">
-                {calibrationReportsCount}
-              </h2>
-              <p className="text-gray-600">TnR Calibration Reports</p>
-            </div>
-            <div
-              className="p-4 bg-yellow-100 rounded-lg shadow text-center cursor-pointer hover:bg-yellow-200"
-              onClick={() => openModal("Due Soon", dueTodayReports)}
-            >
-              <h2 className="text-2xl font-bold text-yellow-500">{dueSoon}</h2>
-              <p className="text-gray-600">Due Today</p>
-            </div>
-            <div
-              className="p-4 bg-red-100 rounded-lg shadow text-center cursor-pointer hover:bg-red-200"
-              onClick={() => openModal("Overdue", overdueReports)}
-            >
-              <h2 className="text-2xl font-bold text-red-500">{overdue}</h2>
-              <p className="text-gray-600">Overdue</p>
-            </div>
-            <div className="p-4 bg-green-100 rounded-lg shadow text-center cursor-pointer hover:bg-green-200">
-              <h2 className="text-2xl font-bold text-green-500">{tnrCompleted}</h2>
-              <p className="text-gray-600">TNR PM Completed</p>
-            </div>
-          </div>
-
-          {/* 🔹 Charts */}
-          <div className="grid grid-cols-1 gap-6 mb-6">
-            <div className="bg-white p-4 shadow rounded-lg">
-              <h3 className="text-lg font-semibold mb-4 text-gray-600">
-                TNR PM Checklist Status
-              </h3>
-
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={checklistStatus} className="hover:text-gray-600 text-gray-600">
-                  <XAxis dataKey="name" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]} label={{ position: "top" }}>
-                    {checklistStatus.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.name === "Completed" ? "#10B981" : "#FACC15"}
-                      />
-                    ))}
-                  </Bar>
-                  <Legend content={renderCustomLegend} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* 🔹 For Non-TnR */}
-          <div className="bg-white p-4 shadow rounded-lg">
-            <h3 className="text-lg font-semibold mb-4 text-gray-600">
-              Non TnR Calibration Reports
-            </h3>
-          </div>
-
-          {/* 🔹 Modal */}
-          {modalOpen && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white rounded-lg shadow-lg w-11/12 max-h-[90vh] overflow-y-auto">
-                {/* Header */}
-                <div className="flex justify-between items-center bg-gradient-to-r from-gray-600 to-black text-white p-4 rounded-t-lg sticky top-0 z-10">
-                  <h2 className="text-lg font-bold ml-4">
-                    <i className="fa-regular fa-rectangle-list"></i> {modalTitle}
-                  </h2>
-                  <button
-                    className="text-white text-xl"
-                    onClick={() => setModalOpen(false)}
-                  >
-                    <i className="fas fa-times text-red-500 hover:text-red-700"></i>
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="p-6">
-                  {!selectedItem ? (
-                    /* List View */
-                    <table className="w-full border text-sm">
-                      <thead className="bg-gray-200 text-gray-600">
-                        <tr>
-                          <th className="p-2 border">#</th>
-                          {modalTitle === "Calibration Reports" ? (
-                            <>
-                              <th className="p-2 border">Equipment</th>
-                              <th className="p-2 border">Control No</th>
-                              <th className="p-2 border">Due</th>
-                            </>
-                          ) : (
-                            <>
-                              <th className="p-2 border">Machine</th>
-                              <th className="p-2 border">Control No</th>
-                              <th className="p-2 border">PM Due</th>
-                            </>
-                          )}
-                          <th className="p-2 border">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {modalData.map((item, i) => (
-                          <tr key={i} className="hover:bg-gray-100 text-gray-600">
-                            <td className="border p-2">{i + 1}</td>
-                            {modalTitle === "Calibration Reports" ? (
-                              <>
-                                <td className="border p-2">{item.equipment}</td>
-                                <td className="border p-2">{item.control_no}</td>
-                                <td className="border p-2">{item.calibration_due}</td>
-                              </>
-                            ) : (
-                              <>
-                                <td className="border p-2">{item.machine_num}</td>
-                                <td className="border p-2">{item.pmnt_no}</td>
-                                <td className="border p-2">{item.pm_due}</td>
-                              </>
-                            )}
-                            <td className="border p-2 text-center">
-                              <button
-                                className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                onClick={() => setSelectedItem(item)}
-                              >
-                                <i className="fa-regular fa-eye"></i> View
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    /* Detail View */
-                    <div>
-                      {modalTitle === "Calibration Reports" ? (
-                        <div className="space-y-6">
-                          {/* Basic Fields */}
-                          <div className="grid grid-cols-4 gap-4">
-                            {[
-                              "equipment",
-                              "manufacturer",
-                              "control_no",
-                              "performed_by",
-                              "calibration_date",
-                              "calibration_due",
-                              "model",
-                              "serial",
-                              "temperature",
-                              "relative_humidity",
-                              "specs",
-                              "report_no",
-                              "cal_interval",
-                            ].map((key) => (
-                              <div key={key}>
-                                <label className="block font-semibold text-gray-500">
-                                  {key.replace(/_/g, " ")}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={selectedItem[key] || ""}
-                                  readOnly
-                                  className="border p-2 rounded w-full text-gray-600 bg-gray-100"
+// Used for both EE and QA roles — previously this was two near-identical
+// copy-pasted <BarChart> blocks (one even had a stray <p> tag rendered
+// inside the chart itself, which recharts can't handle as a child).
+function NonTnrApprovalBarChart({ data }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base font-semibold text-gray-600">
+                    Non-TNR Cal Reports for Approval
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={data}>
+                        <XAxis dataKey="name" />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Bar
+                            dataKey="value"
+                            radius={[8, 8, 0, 0]}
+                            label={{ position: "top" }}
+                        >
+                            {data.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={
+                                        entry.name === "For Approval"
+                                            ? "#515257"
+                                            : "#FACC15"
+                                    }
                                 />
-                              </div>
                             ))}
-                          </div>
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
+    );
+}
 
-                          {/* Calibration Standards Used */}
-                          {selectedItem.cal_std_use && (
-                            <div>
-                              <h4 className="font-semibold text-gray-700 mb-2">
-                                Calibration Standards Used
-                              </h4>
-                              <table className="table-auto w-full border text-sm">
-                                <thead className="bg-gray-200 text-gray-600">
-                                  <tr>
-                                    <th className="border p-2">Description</th>
-                                    <th className="border p-2">Manufacturer</th>
-                                    <th className="border p-2">Model</th>
-                                    <th className="border p-2">Control No</th>
-                                    <th className="border p-2">Serial No</th>
-                                    <th className="border p-2">Accuracy</th>
-                                    <th className="border p-2">Cal Date</th>
-                                    <th className="border p-2">Cal Due</th>
-                                    <th className="border p-2">Traceability</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {JSON.parse(selectedItem.cal_std_use).map((std, i) => (
-                                    <tr key={i} className="text-gray-600 hover:bg-gray-50">
-                                      <td className="border p-2">{std.description}</td>
-                                      <td className="border p-2">{std.cal_manufacturer}</td>
-                                      <td className="border p-2">{std.model_no}</td>
-                                      <td className="border p-2">{std.cal_control_no}</td>
-                                      <td className="border p-2">{std.serial_no}</td>
-                                      <td className="border p-2">{std.accuracy}</td>
-                                      <td className="border p-2">{std.cal_date}</td>
-                                      <td className="border p-2">{std.cal_due}</td>
-                                      <td className="border p-2">{std.traceability}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
+// Renamed from "non-TNR PM Checklist Status": this data comes from
+// scheduler_tbl (senior_ee_ack / qa_ack), which IS the TNR scheduler — the
+// old label called it "non-TNR" which was backwards.
+function TnrAckPieChart({ data }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base font-semibold text-gray-600">
+                    TNR PM Acknowledgement Status
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                        <Pie
+                            data={data}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={90}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                        >
+                            {data.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={
+                                        entry.name === "For Approval"
+                                            ? "#f78940"
+                                            : "#FACC15"
+                                    }
+                                />
+                            ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
+    );
+}
 
-                          {/* Calibration Details */}
-                          {selectedItem.cal_details && (
-                            <div>
-                              <h4 className="font-semibold text-gray-700 mb-2">
-                                Calibration Details
-                              </h4>
-                              <table className="table-auto w-full border text-sm">
-                                <thead className="bg-gray-200 text-gray-600">
-                                  <tr>
-                                    <th className="border p-2">Function Tested</th>
-                                    <th className="border p-2">Nominal</th>
-                                    <th className="border p-2">Tolerance</th>
-                                    <th className="border p-2">Unit Under Test</th>
-                                    <th className="border p-2">Standard Instrument</th>
-                                    <th className="border p-2">Disparity</th>
-                                    <th className="border p-2">Correction</th>
-                                    <th className="border p-2">Remarks</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {JSON.parse(selectedItem.cal_details).map((d, i) => (
-                                    <tr key={i} className="text-gray-600 hover:bg-gray-50">
-                                      <td className="border p-2">{d.function_tested}</td>
-                                      <td className="border p-2">{d.nominal}</td>
-                                      <td className="border p-2">{d.tolerance}</td>
-                                      <td className="border p-2">{d.unit_under_test}</td>
-                                      <td className="border p-2">{d.standard_instrument}</td>
-                                      <td className="border p-2">{d.disparity}</td>
-                                      <td className="border p-2">{d.correction}</td>
-                                      <td className="border p-2">{d.remarks}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                              <div className="flex justify-end mt-4">
-                                {modalTitle !== "Calibration Reports" &&
-                                  (isDueToday(selectedItem.pm_due) || isOverdue(selectedItem.pm_due)) && (
-                                    <>
-                                      <button
-                                        className="text-white text-xl bg-sky-500 hover:bg-sky-600 rounded px-4 py-2 mr-2 btn-sm"
-                                        onClick={() =>
-                                          router.visit(route("tnr.fillup", { id: selectedItem.id }))
-                                        }
-                                      >
-                                        <i className="fas fa-fill mr-1"></i> Fillup
-                                      </button>
-
-                                      <button
-                                        className="text-white text-xl bg-green-400 hover:bg-green-600 rounded px-4 py-2"
-                                        onClick={() =>
-                                          router.visit(route("tnr.extend", { id: selectedItem.id }))
-                                        }
-                                      >
-                                        <i className="fas fa-check mr-1"></i> Extend
-                                      </button>
-                                    </>
-                                  )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            <div>
-                              <label className="block font-semibold text-gray-600">Machine</label>
-                              <input
-                                type="text"
-                                className="form-control border rounded w-full text-gray-600"
-                                value={selectedItem.machine_num || ""}
-                                readOnly
-                              />
-                            </div>
-                            <div>
-                              <label className="block font-semibold text-gray-600">Control Number</label>
-                              <input
-                                type="text"
-                                className="form-control border rounded w-full text-gray-600"
-                                value={selectedItem.pmnt_no || ""}
-                                readOnly
-                              />
-                            </div>
-                            <div>
-                              <label className="block font-semibold text-gray-600">Serial Number</label>
-                              <input
-                                type="text"
-                                className="form-control border rounded w-full text-gray-600"
-                                value={selectedItem.serial || ""}
-                                readOnly
-                              />
-                            </div>
-                            <div>
-                              <label className="block font-semibold text-gray-600">PM Date</label>
-                              <input
-                                type="text"
-                                className="form-control border rounded w-full text-gray-600"
-                                value={selectedItem.first_cycle || ""}
-                                readOnly
-                              />
-                            </div>
-                            <div>
-                              <label className="block font-semibold text-gray-600">PM Due</label>
-                              <input
-                                type="text"
-                                className="form-control border rounded w-full text-gray-600"
-                                value={selectedItem.pm_due || ""}
-                                readOnly
-                              />
-                            </div>
-                            <div>
-                              <label className="block font-semibold text-gray-600">Technician</label>
-                              <input
-                                type="text"
-                                className="form-control border rounded w-full text-gray-600"
-                                value={selectedItem.responsible_person || "Empty Field..."}
-                                readOnly
-                              />
-                            </div>
-                          </div>
-
-                          {/* PM Answers Table */}
-                          {selectedItem.answers && (
-                            <div className="mt-4">
-                              <div className="border p-2 rounded overflow-x-auto">
-                                <table className="table-auto w-full text-sm border-collapse border border-gray-300">
-                                  <thead>
-                                    <tr className="bg-gradient-to-r from-gray-600 to-black text-white">
-                                      <th className="border px-2 py-1">#</th>
-                                      <th className="border px-2 py-1">Assy Item</th>
-                                      <th className="border px-2 py-1">Description</th>
-                                      <th className="border px-2 py-1">Requirements</th>
-                                      <th className="border px-2 py-1">Activity</th>
-                                      <th className="border px-2 py-1">Compliance</th>
-                                      <th className="border px-2 py-1">Remarks</th>
-                                      <th className="border px-2 py-1">Activity</th>
-                                      <th className="border px-2 py-1">Compliance</th>
-                                      <th className="border px-2 py-1">Remarks</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {JSON.parse(selectedItem.answers).map((ans, i) => (
-                                      <tr key={i} className="text-gray-500">
-                                        <td className="border px-2 py-1">{i + 1}</td>
-                                        <td className="border px-2 py-1">{ans.assy_item}</td>
-                                        <td className="border px-2 py-1">{ans.description}</td>
-                                        <td className="border px-2 py-1">{ans.requirements}</td>
-                                        <td className="border px-2 py-1">{ans.activity_1}</td>
-                                        <td className="border px-2 py-1 text-center">
-                                          <input type="checkbox" checked={!!ans.compliance1} readOnly className="h-4 w-4 accent-green-600 rounded-full" />
-                                        </td>
-                                        <td className="border px-2 py-1">{ans.remarks1}</td>
-                                        <td className="border px-2 py-1">{ans.activity_2}</td>
-                                        <td className="border px-2 py-1 text-center">
-                                          <input type="checkbox" checked={!!ans.compliance2} readOnly className="h-4 w-4 accent-green-600 rounded-full" />
-                                        </td>
-                                        <td className="border px-2 py-1">{ans.remarks2}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+function ReadOnlyField({ label, value }) {
+    return (
+        <div>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {label.replace(/_/g, " ")}
+            </Label>
+            <Input value={value || ""} readOnly className="mt-1 bg-gray-50" />
         </div>
-      )}
-    </AuthenticatedLayout>
-  );
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+export default function Dashboard(props) {
+    const { emp_data } = usePage().props;
+
+    const QAforApprovalcalReportsCount =
+        props.QAforApprovalcalReportsCount ?? 0;
+    const EEforApprovalcalReportsCount =
+        props.EEforApprovalcalReportsCount ?? 0;
+    const calibrationReportsCount = props.calibrationReportsCount ?? 0;
+    const seniortechAck = props.seniortechAck ?? 0;
+    const esdAck = props.esdAck ?? 0;
+    const senioreeAck = props.senioreeAck ?? 0;
+    const dueSoon = props.dueSoon ?? 0;
+    const overdue = props.overdue ?? 0;
+    const tnrCompleted = props.tnrCompleted ?? 0;
+
+    const eeCalVerifierStatus = props.eeCalVerifierStatus ?? [];
+    const qaCalVerifierStatus = props.qaCalVerifierStatus ?? [];
+    const eeVerifierStatus = props.eeVerifierStatus ?? [];
+    const qaVerifierStatus = props.qaVerifierStatus ?? [];
+
+    const checklistStatus = props.checklistStatus ?? [];
+    const latestReports = props.latestReports ?? [];
+    const dueTodayReports = props.dueTodayReports ?? [];
+    const overdueReports = props.overdueReports ?? [];
+    const completedSchedulers = props.completedSchedulers ?? [];
+
+    // Job groups
+    const qaJobs = ["esd"];
+    const eeJobs = ["superadmin", "admin", "engineer"];
+    const combinedJobs = [...qaJobs, ...eeJobs];
+    const departmentRoles = ["pmtech", "seniortech", "toolcrib", "tooling"];
+
+    const isQaRole = qaJobs.includes(emp_data?.emp_role);
+    const isEeRole = eeJobs.includes(emp_data?.emp_role);
+
+    const calApprovalCount = isQaRole
+        ? QAforApprovalcalReportsCount
+        : isEeRole
+          ? EEforApprovalcalReportsCount
+          : 0;
+    const tnrApprovalCount = isQaRole ? esdAck : isEeRole ? senioreeAck : 0;
+    const verifierBarData = isEeRole
+        ? eeCalVerifierStatus
+        : qaCalVerifierStatus;
+    const verifierPieData = isEeRole ? eeVerifierStatus : qaVerifierStatus;
+
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalTitle, setModalTitle] = useState("");
+    const [modalData, setModalData] = useState([]);
+    const [selectedItem, setSelectedItem] = useState(null);
+
+    const machineTotal = props.machineTotal ?? 0;
+    const machineDueToday = props.machineDueToday ?? 0;
+    const machineOverdue = props.machineOverdue ?? 0;
+    const machinePending = props.machinePending ?? 0;
+    const machineInProgress = props.machineInProgress ?? 0;
+    const machineProgressDistribution = props.machineProgressDistribution ?? [];
+
+    const ppcRoles = ['ppc', 'process engineering']; // i-adjust kung paano nakastore sa DB
+const isPpcDept = ppcRoles.includes(emp_data?.emp_dept?.toLowerCase());
+
+    const openModal = (title, data) => {
+        if (!data || data.length === 0) return;
+        setModalTitle(title);
+        setModalData(data);
+        setSelectedItem(null);
+        setModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setModalOpen(false);
+        setSelectedItem(null);
+    };
+
+    const renderCustomLegend = () => (
+        <ul className="flex gap-6 items-center justify-center">
+            {checklistStatus.map((entry, index) => (
+                <li
+                    key={`item-${index}`}
+                    className="flex items-center gap-2 text-gray-600"
+                >
+                    <span
+                        className="inline-block w-3 h-3"
+                        style={{
+                            backgroundColor:
+                                entry.name === "Completed"
+                                    ? "#10B981"
+                                    : "#FACC15",
+                        }}
+                    />
+                    {entry.name}
+                </li>
+            ))}
+        </ul>
+    );
+
+    const isCalibrationModal = modalTitle === "Calibration Reports";
+
+    const CALIBRATION_FIELDS = [
+        "equipment",
+        "manufacturer",
+        "control_no",
+        "performed_by",
+        "calibration_date",
+        "calibration_due",
+        "model",
+        "serial",
+        "temperature",
+        "relative_humidity",
+        "specs",
+        "report_no",
+        "cal_interval",
+    ];
+
+    return (
+        <AuthenticatedLayout>
+            <Head title="Dashboard" />
+
+            <h1 className="text-2xl font-bold mb-6">TNR Checklist</h1>
+
+            {/* Role-level (QA / EE) view */}
+            {combinedJobs.includes(emp_data?.emp_role) && (
+                <div className="mt-6 space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <SummaryCard
+                            label="Calibration Reports for Approval"
+                            value={calApprovalCount}
+                            color="stone"
+                        />
+                        <SummaryCard
+                            label="TNR for Approval"
+                            value={tnrApprovalCount}
+                            color="orange"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <NonTnrApprovalBarChart data={verifierBarData} />
+                        <TnrAckPieChart data={verifierPieData} />
+                    </div>
+                </div>
+            )}
+
+            {/* Department-level view */}
+            {departmentRoles.includes(emp_data?.emp_role) && (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <SummaryCard
+                            label="TnR Calibration Reports"
+                            value={calibrationReportsCount}
+                            color="blue"
+                            onClick={() =>
+                                openModal("Calibration Reports", latestReports)
+                            }
+                        />
+                        <SummaryCard
+                            label="Due Today"
+                            value={dueSoon}
+                            color="yellow"
+                            onClick={() =>
+                                openModal("Due Today", dueTodayReports)
+                            }
+                        />
+                        <SummaryCard
+                            label="Overdue"
+                            value={overdue}
+                            color="red"
+                            onClick={() => openModal("Overdue", overdueReports)}
+                        />
+                        <SummaryCard
+                            label="TNR PM Completed"
+                            value={tnrCompleted}
+                            color="green"
+                            onClick={() =>
+                                openModal(
+                                    "TNR PM Completed",
+                                    completedSchedulers,
+                                )
+                            }
+                        />
+                        <SummaryCard
+                            label="Tech Acknowledgement Pending"
+                            value={seniortechAck}
+                            color="purple"
+                        />
+                    </div>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base font-semibold text-gray-600">
+                                TNR PM Checklist Status
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={checklistStatus}>
+                                    <XAxis dataKey="name" />
+                                    <YAxis allowDecimals={false} />
+                                    <Tooltip />
+                                    <Bar
+                                        dataKey="value"
+                                        radius={[8, 8, 0, 0]}
+                                        label={{ position: "top" }}
+                                    >
+                                        {checklistStatus.map((entry, index) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill={
+                                                    entry.name === "Completed"
+                                                        ? "#10B981"
+                                                        : "#FACC15"
+                                                }
+                                            />
+                                        ))}
+                                    </Bar>
+                                    <Legend content={renderCustomLegend} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base font-semibold text-gray-600">
+                                Non TnR Calibration Reports
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-sm text-gray-400">
+                            {/* Placeholder — no data wired up yet for this section. */}
+                            Coming soon.
+                        </CardContent>
+                    </Card>
+
+                    {/* Modal */}
+                    <Dialog
+                        open={modalOpen}
+                        onOpenChange={(open) => (open ? null : closeModal())}
+                        className="bg-white"
+                    >
+                        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-white">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    {selectedItem && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={() =>
+                                                setSelectedItem(null)
+                                            }
+                                        >
+                                            <ArrowLeft className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                    <ClipboardList className="h-5 w-5" />
+                                    {modalTitle}
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            {!selectedItem ? (
+                                <ScrollArea className="max-h-[70vh] bg-white">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>#</TableHead>
+                                                {isCalibrationModal ? (
+                                                    <>
+                                                        <TableHead>
+                                                            Equipment
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Control No
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Due
+                                                        </TableHead>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <TableHead>
+                                                            Machine
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Control No
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            PM Due
+                                                        </TableHead>
+                                                    </>
+                                                )}
+                                                <TableHead className="text-center">
+                                                    Action
+                                                </TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {modalData.map((item, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell>
+                                                        {i + 1}
+                                                    </TableCell>
+                                                    {isCalibrationModal ? (
+                                                        <>
+                                                            <TableCell>
+                                                                {item.equipment}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    item.control_no
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    item.calibration_due
+                                                                }
+                                                            </TableCell>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <TableCell>
+                                                                {
+                                                                    item.machine_num
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {item.pmnt_no}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {item.pm_due}
+                                                            </TableCell>
+                                                        </>
+                                                    )}
+                                                    <TableCell className="text-center">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                setSelectedItem(
+                                                                    item,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Eye className="h-4 w-4 mr-1" />{" "}
+                                                            View
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </ScrollArea>
+                            ) : isCalibrationModal ? (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {CALIBRATION_FIELDS.map((key) => (
+                                            <ReadOnlyField
+                                                key={key}
+                                                label={key}
+                                                value={selectedItem[key]}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {selectedItem.cal_std_use && (
+                                        <div>
+                                            <h4 className="font-semibold text-gray-700 mb-2">
+                                                Calibration Standards Used
+                                            </h4>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>
+                                                            Description
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Manufacturer
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Model
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Control No
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Serial No
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Accuracy
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Cal Date
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Cal Due
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Traceability
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {safeJsonParse(
+                                                        selectedItem.cal_std_use,
+                                                    ).map((std, i) => (
+                                                        <TableRow key={i}>
+                                                            <TableCell>
+                                                                {
+                                                                    std.description
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    std.cal_manufacturer
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {std.model_no}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    std.cal_control_no
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {std.serial_no}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {std.accuracy}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {std.cal_date}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {std.cal_due}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    std.traceability
+                                                                }
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+
+                                    {selectedItem.cal_details && (
+                                        <div>
+                                            <h4 className="font-semibold text-gray-700 mb-2">
+                                                Calibration Details
+                                            </h4>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>
+                                                            Function Tested
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Nominal
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Tolerance
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Unit Under Test
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Standard Instrument
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Disparity
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Correction
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Remarks
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {safeJsonParse(
+                                                        selectedItem.cal_details,
+                                                    ).map((d, i) => (
+                                                        <TableRow key={i}>
+                                                            <TableCell>
+                                                                {
+                                                                    d.function_tested
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {d.nominal}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {d.tolerance}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    d.unit_under_test
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    d.standard_instrument
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {d.disparity}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {d.correction}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {d.remarks}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                        <ReadOnlyField
+                                            label="Machine"
+                                            value={selectedItem.machine_num}
+                                        />
+                                        <ReadOnlyField
+                                            label="Control Number"
+                                            value={selectedItem.pmnt_no}
+                                        />
+                                        <ReadOnlyField
+                                            label="Serial Number"
+                                            value={selectedItem.serial}
+                                        />
+                                        <ReadOnlyField
+                                            label="PM Date"
+                                            value={selectedItem.first_cycle}
+                                        />
+                                        <ReadOnlyField
+                                            label="PM Due"
+                                            value={selectedItem.pm_due}
+                                        />
+                                        <ReadOnlyField
+                                            label="Technician"
+                                            value={
+                                                selectedItem.responsible_person ||
+                                                "Empty Field..."
+                                            }
+                                        />
+                                    </div>
+
+                                    {selectedItem.answers && (
+                                        <ScrollArea className="w-full">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>#</TableHead>
+                                                        <TableHead>
+                                                            Assy Item
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Description
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Requirements
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Activity
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Compliance
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Remarks
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Activity
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Compliance
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Remarks
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {safeJsonParse(
+                                                        selectedItem.answers,
+                                                    ).map((ans, i) => (
+                                                        <TableRow key={i}>
+                                                            <TableCell>
+                                                                {i + 1}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {ans.assy_item}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    ans.description
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {
+                                                                    ans.requirements
+                                                                }
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {ans.activity_1}
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Badge
+                                                                    variant={
+                                                                        ans.compliance1
+                                                                            ? "default"
+                                                                            : "secondary"
+                                                                    }
+                                                                >
+                                                                    {ans.compliance1
+                                                                        ? "Yes"
+                                                                        : "No"}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {ans.remarks1}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {ans.activity_2}
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Badge
+                                                                    variant={
+                                                                        ans.compliance2
+                                                                            ? "default"
+                                                                            : "secondary"
+                                                                    }
+                                                                >
+                                                                    {ans.compliance2
+                                                                        ? "Yes"
+                                                                        : "No"}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {ans.remarks2}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
+                                    )}
+
+                                    {/* Fixed: these used to live inside the Calibration Reports
+                      branch behind `modalTitle !== "Calibration Reports"`,
+                      which is always false there — so the buttons could
+                      never render. They belong here, in the PM-checklist
+                      branch. */}
+                                    {(isDueToday(selectedItem.pm_due) ||
+                                        isOverdue(selectedItem.pm_due)) && (
+                                        <div className="flex justify-end gap-2 pt-2">
+                                            <Button
+                                                className="bg-sky-500 hover:bg-sky-600"
+                                                onClick={() =>
+                                                    router.visit(
+                                                        route("tnr.fillup", {
+                                                            id: selectedItem.id,
+                                                        }),
+                                                    )
+                                                }
+                                            >
+                                                <Wrench className="h-4 w-4 mr-1" />{" "}
+                                                Fillup
+                                            </Button>
+                                            <Button
+                                                className="bg-green-500 hover:bg-green-600"
+                                                onClick={() =>
+                                                    router.visit(
+                                                        route("tnr.extend", {
+                                                            id: selectedItem.id,
+                                                        }),
+                                                    )
+                                                }
+                                            >
+                                                <CheckCircle2 className="h-4 w-4 mr-1" />{" "}
+                                                Extend
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            )}
+
+            {isPpcDept && (
+                <div className="mt-6 space-y-6">
+                    <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                        <Wrench className="h-5 w-5" />
+                        Machine PM/Cal Tracker Overview
+                    </h2>
+
+                    {/* Summary Cards — completed excluded na */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <SummaryCard
+                            label="Total Active Machines"
+                            value={machineTotal}
+                            color="stone"
+                        />
+                        <SummaryCard
+                            label="Due Today"
+                            value={machineDueToday}
+                            color="yellow"
+                        />
+                        <SummaryCard
+                            label="Overdue"
+                            value={machineOverdue}
+                            color="red"
+                        />
+                        <SummaryCard
+                            label="Pending (No Activity)"
+                            value={machinePending}
+                            color="orange"
+                        />
+                        <SummaryCard
+                            label="In Progress"
+                            value={machineInProgress}
+                            color="blue"
+                        />
+                    </div>
+
+                    {/* Two charts side by side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Chart 1: Pending vs In Progress — Donut */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base font-semibold text-gray-600">
+                                    Activity Status
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                {
+                                                    name: "Pending (No Activity)",
+                                                    value: machinePending,
+                                                },
+                                                {
+                                                    name: "In Progress",
+                                                    value: machineInProgress,
+                                                },
+                                            ]}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={90}
+                                            dataKey="value"
+                                            label={({ name, value }) =>
+                                                `${name}: ${value}`
+                                            }
+                                        >
+                                            <Cell fill="#FACC15" />
+                                            <Cell fill="#3B82F6" />
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </CardContent>
+                        </Card>
+
+                        {/* Chart 2: Progress level distribution — Horizontal Bar */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base font-semibold text-gray-600">
+                                    Progress Level Breakdown
+                                </CardTitle>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Number of Machines per Progress Level
+                                    (Excluding Completed)
+                                </p>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <BarChart
+                                        layout="vertical"
+                                        data={machineProgressDistribution}
+                                        margin={{ left: 16 }}
+                                    >
+                                        <XAxis
+                                            type="number"
+                                            allowDecimals={false}
+                                        />
+                                        <YAxis
+                                            type="category"
+                                            dataKey="label"
+                                            width={90}
+                                        />
+                                        <Tooltip />
+                                        <Bar
+                                            dataKey="value"
+                                            radius={[0, 8, 8, 0]}
+                                            label={{ position: "right" }}
+                                        >
+                                            <Cell fill="#93C5FD" />{" "}
+                                            {/* 20% - light blue */}
+                                            <Cell fill="#60A5FA" /> {/* 40% */}
+                                            <Cell fill="#3B82F6" /> {/* 60% */}
+                                            <Cell fill="#1D4ED8" />{" "}
+                                            {/* 80% - dark blue */}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Link to full tracker */}
+                    <div className="flex justify-end">
+                        <Button
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                            onClick={() =>
+                                router.visit(route("machines-tracker.index"))
+                            }
+                        >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Full Machine Tracker
+                        </Button>
+                    </div>
+                </div>
+            )}
+        </AuthenticatedLayout>
+    );
 }

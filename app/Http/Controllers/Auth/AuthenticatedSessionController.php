@@ -47,7 +47,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         // Optional: Get role from admin table
-        $isAdmin = DB::table('admin')
+        $isAdmin = DB::connection('mysql')->table('admin')
             ->where('emp_id', $currentUser->EMPLOYID)
             ->first();
 

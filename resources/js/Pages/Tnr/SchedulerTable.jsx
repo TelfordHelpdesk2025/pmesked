@@ -424,7 +424,7 @@ action: (
     >
       <span className="block group-hover:hidden"><i className="fas fa-eye"></i></span>
       <span className="hidden group-hover:block"><i className="fas fa-eye mr-1"></i>View</span>
-      
+
     </button>
 
 {/* --- REMOVED BUTTON (VISIBLE ONLY IF tech_ack IS NULL/EMPTY AND USER IS RESPONSIBLE_PERSON) --- */}
@@ -533,7 +533,7 @@ const handleCheckAll = (e, complianceField) => {
           <button
             className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 border-2 border-blue-800"
             onClick={() => setShowModal(true)}
-            
+
             >
               + New Checklist
           </button>
@@ -826,7 +826,7 @@ const handleCheckAll = (e, complianceField) => {
                                     "compliance1",
                                     e.target.checked ? 1 : 0
                                   )
-                                  
+
                                 }
                                 className="w-5 h-5 mx-auto"
                               />
@@ -1282,7 +1282,7 @@ const handleCheckAll = (e, complianceField) => {
         if (formData.performedBy === currentUser) {
   return (
     <div className="text-red-600 font-semibold bg-red-100 border border-red-400 rounded px-3 py-2 mt-2">
-      <i className="fa-solid fa-circle-exclamation"></i> 
+      <i className="fa-solid fa-circle-exclamation"></i>
       &nbsp; You cannot verify your own activity.
     </div>
   );
@@ -1310,7 +1310,7 @@ const handleCheckAll = (e, complianceField) => {
             );
           }
 
-          
+
 
           if (isQA && selectedActivity.tech_ack && !selectedActivity.qa_ack) {
             return (

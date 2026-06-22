@@ -36,6 +36,7 @@ class AuthMiddleware
         // Merge admin role with session data
         $empData = (array) $session;
         $empData['emp_role'] = $adminData->emp_role ?? null;
+        $empData['emp_dept'] = $session->emp_dept ?? null;
 
         // Save to session
         session(['emp_data' => $empData]);
@@ -43,15 +44,33 @@ class AuthMiddleware
         // Role-based access check
         $role = $empData['emp_role'];
         $empId = $empData['emp_id'];
+        $dept = $session->emp_dept ?? null;
 
-        if (
-            !in_array($role, ['superadmin', 'admin', 'esd', 'engineer', 'pmtech', 'seniortech', 'tooling', 'toolcrib'])
-        ) {
-            // User is not authorized
-            session()->forget('auth_token');
-            session()->forget('emp_data');
-            return redirect()->route('unauthorized');
-        }
+        $allowedRoles = [
+    'superadmin',
+    'admin',
+    'esd',
+    'engineer',
+    'pmtech',
+    'seniortech',
+    'tooling',
+    'toolcrib'
+];
+
+$allowedDepts = [
+    'PPC',
+    'Process Engineering'
+];
+
+if (
+    !in_array($role, $allowedRoles) &&
+    !in_array(trim($dept), $allowedDepts)
+) {
+    session()->forget('auth_token');
+    session()->forget('emp_data');
+
+    return redirect()->route('unauthorized');
+}
 
         return $next($request);
     }
