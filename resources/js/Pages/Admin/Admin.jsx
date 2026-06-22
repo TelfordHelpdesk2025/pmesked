@@ -2,8 +2,26 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, usePage, router } from "@inertiajs/react";
 import DataTable from "@/Components/DataTable";
 import Modal from "@/Components/Modal";
-
 import { useState } from "react";
+
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function Admin({ tableData, tableFilters, emp_data }) {
     const [role, setRole] = useState(null);
@@ -50,19 +68,25 @@ export default function Admin({ tableData, tableFilters, emp_data }) {
                     <i className="fa-solid fa-users"></i> PM Personnel
                 </h1>
 
-                  {(
-    ["superadmin", "admin", "engineer"].includes(emp_data?.emp_role) 
-    || (["pmtech"].includes(emp_data?.emp_role) && ["1742"].includes(emp_data?.emp_id))
-) && (
-    <div>
-                    <button
-                         className="text-white bg-emerald-500 border-emerald-900 btn hover:bg-emerald-700"
-                        onClick={() =>
-                            router.get(route("index_addAdmin"), {}, { preserveScroll: true })
-                        }
-                    >
-                        <i className="fa-solid fa-user-plus"></i> Add New PM
-                    </button>
+                {(["superadmin", "admin", "engineer"].includes(
+                    emp_data?.emp_role,
+                ) ||
+                    (["pmtech"].includes(emp_data?.emp_role) &&
+                        ["1742"].includes(emp_data?.emp_id))) && (
+                    <div>
+                        <Button
+                            onClick={() =>
+                                router.get(
+                                    route("index_addAdmin"),
+                                    {},
+                                    { preserveScroll: true },
+                                )
+                            }
+                            className="flex items-center bg-gray-500 text-white hover:bg-gray-700/90"
+                        >
+                            <i className="fa-solid fa-user-plus" />
+                            Add New
+                        </Button>
                     </div>
                 )}
             </div>
@@ -89,84 +113,151 @@ export default function Admin({ tableData, tableFilters, emp_data }) {
                 showExport={false}
             >
                 {(row, close) => (
-                    <Modal
-                        id="RowModal"
-                        icon="<i className='fa-solid fa-users-gear mr-2 text-blue-600'></i>"
-                        title="Employee Details"
-                        show={true}
-                        onClose={() => tableModalClose(close)}
-                        className="max-w-md w-full rounded-2xl shadow-xl bg-white dark:text-gray-200 dark:bg-gray-800 p-6 border border-gray-200 dark:border-gray-700"
+                    <Dialog
+                        open={true}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                tableModalClose(close);
+                            }
+                        }}
                     >
-                        <div className="space-y-4">
-                            {/* User Info */}
-                            <div className="text-center">
-                                <div className="text-4xl text-blue-600 mb-2">
-                                    <i className="fa-solid fa-user-circle"></i>
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                                    {row.emp_name}
-                                </h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    ID: <span className="font-semibold">{row.emp_id}</span>
-                                </p>
-                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                    Current Role:{" "}
-                                    <span className="font-semibold text-blue-600 dark:text-blue-400">
-                                        {row.emp_role}
-                                    </span>
-                                </p>
-                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                    Job Title:{" "}
-                                    <span className="font-semibold text-gray-700 dark:text-gray-300">
-                                        {row.emp_jobtitle}
-                                    </span>
-                                </p>
-                            </div>
+                        <DialogContent className="sm:max-w-md bg-white">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <i className="fa-solid fa-users-gear text-primary" />
+                                    Employee Details
+                                </DialogTitle>
+                            </DialogHeader>
 
-                            {/* Admin Controls */}
-                            {["superadmin", "admin", "engineer"].includes(emp_data?.emp_role) &&
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <div className="flex flex-col items-center text-center gap-2">
+                                        <i className="fa-solid fa-user-circle text-5xl text-primary" />
+
+                                        <h2 className="text-xl font-bold">
+                                            {row.emp_name}
+                                        </h2>
+
+                                        <p className="text-sm text-muted-foreground">
+                                            ID:{" "}
+                                            <span className="font-medium">
+                                                {row.emp_id}
+                                            </span>
+                                        </p>
+
+                                        <div>
+                                            <span className="text-sm text-muted-foreground">
+                                                Current Role
+                                            </span>
+
+                                            <div className="mt-1">
+                                                <Badge className="bg-green-500">
+                                                    {row.emp_role}
+                                                </Badge>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-sm text-muted-foreground">
+                                            Job Title:{" "}
+                                            <span className="font-medium text-foreground">
+                                                {row.emp_jobtitle}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {["superadmin", "admin", "engineer"].includes(
+                                emp_data?.emp_role,
+                            ) &&
                                 !row.emp_role.includes("superadmin") && (
-                                    <div className="mt-6 space-y-4">
-                                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                            Update Role
-                                        </label>
-                                        <select
-                                            defaultValue={row.emp_role}
-                                            onChange={(e) => setRole(e.target.value)}
-                                            className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm p-2"
-                                        >
-                                            {emp_data?.emp_role === "superadmin" && (
-                                                <option value="superadmin">Superadmin</option>
-                                            )}
-                                            {["superadmin", "admin"].includes(emp_data?.emp_role) && (
-                                                <option value="admin">Admin</option>
-                                            )}
-                                            <option value="tooling">Tooling</option>
-                                            <option value="pmtech">PM Tech</option>
-                                            <option value="toolcrib">Toolcrib</option>
-                                            <option value="seniortech">SeniorTech</option>
-                                            <option value="enginner">Enginner</option>
-                                            <option value="esd">ESD</option>
-                                        </select>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-sm font-medium">
+                                                Update Role
+                                            </label>
 
-                                        <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                            <button
-                                                onClick={() => changeRole(row.emp_id)}
-                                                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium transition-all duration-200"
+                                            <Select
+                                                defaultValue={row.emp_role}
+                                                onValueChange={(value) =>
+                                                    setRole(value)
+                                                }
                                             >
-                                                <i className="fa-solid fa-rotate me-2"></i> Update Role
-                                            </button>
-                                            <button
-                                                onClick={() => removeAdmin(row.emp_id)}
-                                                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-medium transition-all duration-200"
+                                                <SelectTrigger className="mt-2">
+                                                    <SelectValue placeholder="Select role" />
+                                                </SelectTrigger>
+
+                                                <SelectContent className="bg-white">
+                                                    {emp_data?.emp_role ===
+                                                        "superadmin" && (
+                                                        <SelectItem value="superadmin">
+                                                            Superadmin
+                                                        </SelectItem>
+                                                    )}
+
+                                                    {[
+                                                        "superadmin",
+                                                        "admin",
+                                                    ].includes(
+                                                        emp_data?.emp_role,
+                                                    ) && (
+                                                        <SelectItem value="admin">
+                                                            Admin
+                                                        </SelectItem>
+                                                    )}
+
+                                                    <SelectItem value="tooling">
+                                                        Tooling
+                                                    </SelectItem>
+
+                                                    <SelectItem value="pmtech">
+                                                        PM Tech
+                                                    </SelectItem>
+
+                                                    <SelectItem value="toolcrib">
+                                                        Toolcrib
+                                                    </SelectItem>
+
+                                                    <SelectItem value="seniortech">
+                                                        SeniorTech
+                                                    </SelectItem>
+
+                                                    <SelectItem value="enginner">
+                                                        Engineer
+                                                    </SelectItem>
+
+                                                    <SelectItem value="esd">
+                                                        ESD
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 border-t pt-4">
+                                            <Button
+                                                onClick={() =>
+                                                    changeRole(row.emp_id)
+                                                }
+                                                className="bg-blue-500 text-white hover:bg-blue-600"
                                             >
-                                                <i className="fa-solid fa-user-slash me-2"></i> Remove
-                                            </button>
+                                                <i className="fa-solid fa-rotate" />
+                                                Update Role
+                                            </Button>
+
+                                            <Button
+                                                onClick={() =>
+                                                    removeAdmin(row.emp_id)
+                                                }
+                                                className="bg-red-500 text-white hover:bg-red-600"
+                                            >
+                                                <i className="fa-solid fa-user-slash" />
+                                                Remove
+                                            </Button>
                                         </div>
                                     </div>
                                 )}
-                        </div>
-                    </Modal>
+                        </DialogContent>
+                    </Dialog>
                 )}
             </DataTable>
         </AuthenticatedLayout>
