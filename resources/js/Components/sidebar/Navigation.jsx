@@ -97,12 +97,12 @@ export default function NavLinks() {
             href: route("dashboard"),
         },
 
-        {
-            type: "item",
-            label: "PM/Cal Tracker",
-            icon: Pin,
-            href: route("machines-tracker.index"),
-        },
+        // {
+        //     type: "item",
+        //     label: "PM/Cal Tracker",
+        //     icon: Pin,
+        //     href: route("machines-tracker.index"),
+        // },
 
         isPMRole && {
             type: "group",
